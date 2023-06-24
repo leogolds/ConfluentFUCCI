@@ -1,0 +1,10 @@
+site_name: ConfluentFUCCI
+site_description: 'A docs test'
+site_author: 'Leo Goldstien'
+docs_dir: docs/
+repo_name: 'mhausenblas/mkdocs-template'
+repo_url: 'https://github.com/mhausenblas/mkdocs-template'
+nav:
+    - Home: index.md
+theme:
+  name: 'material'
