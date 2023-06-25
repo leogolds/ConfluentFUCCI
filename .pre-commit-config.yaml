@@ -8,7 +8,7 @@ repos:
         require_serial: true
         language: system
         types: [python]
-        exclude: "containers/.*/.*\\.py"
+        exclude: "containers/"
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
     rev: 'v0.0.261'
