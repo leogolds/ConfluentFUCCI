@@ -49,7 +49,7 @@ addopts = [
     "--log-disable=asyncio",
 ]
 
-testpaths = [".", "tests"]
+testpaths = ["tests"]
 doctest_optionflags = [
     "NORMALIZE_WHITESPACE",
     "ELLIPSIS"
