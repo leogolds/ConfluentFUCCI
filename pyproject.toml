@@ -123,6 +123,7 @@ unfixable = []
 fix = true
 
 exclude = [
+    "containers",
     ".bzr",
     ".direnv",
     ".eggs",
