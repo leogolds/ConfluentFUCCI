@@ -6,6 +6,11 @@ repo_name: 'leogolds/ConfluentFUCCI'
 repo_url: 'https://github.com/leogolds/ConfluentFUCCI'
 nav:
     - Home: index.md
-    - Examples: examples.md
+    - Walkthrough:
+        - Basic Usage: notebooks/walkthrough-1.ipynb
+
 theme:
   name: 'material'
+
+plugins:
+  - mkdocs-jupyter
