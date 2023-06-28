@@ -7,7 +7,9 @@ repo_url: 'https://github.com/leogolds/ConfluentFUCCI'
 nav:
     - Home: index.md
     - Walkthroughs:
-        - Basic Usage: notebooks/walkthrough-1.ipynb
+        - notebooks/walkthrough-1.ipynb
+        - notebooks/walkthrough-2.ipynb
+        - notebooks/walkthrough-3.ipynb
 
 theme:
   name: 'material'
