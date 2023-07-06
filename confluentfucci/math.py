@@ -13,6 +13,12 @@ from shapely.geometry.linestring import LineString
 
 tqdm.tqdm.pandas()
 
+# TODO externalize
+magnification_towards_camera = 1
+# pixel_size_in_microns = 0.345 * magnification_towards_camera
+pixel_size_in_microns = 0.67 * magnification_towards_camera
+calibration_squared_microns_to_squared_pixel = pixel_size_in_microns**2
+
 
 def pairwise_iterator(iterable):
     "s -> (s0, s1), (s2, s3), (s4, s5), ..."

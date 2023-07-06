@@ -9,38 +9,27 @@ from tkinter import (
 import holoviews as hv
 import hvplot.pandas
 import napari
-
-# import pandas as pd
-# from dask_image.imread import imread
-#
-# import holoviews as hv
-# import napari
-# import numpy as np
+import numpy as np
+import pandas as pd
 import panel as pn
 import param
 from dask_image.imread import imread
 from shapely import Polygon
+from skimage.exposure import equalize_adapthist
 from utils import (
     read_stack,
     run_trackmate,
+    segment_stack,
 )
 
 from confluentfucci.math import (
     CartesianSimilarity,
+    CartesianSimilarityFromFile,
+    TrackmateXML,
     compute_voronoi,
     compute_voronoi_stats,
     filter_voronoi_tiling,
 )
-
-# from shapely.geometry import Polygon
-# from skimage.exposure import equalize_adapthist
-#
-# from trackmate_utils import (
-#     CartesianSimilarity,
-#     TrackmateXML,
-#     CartesianSimilarityFromFile,
-# )
-
 
 pn.extension("terminal")
 
@@ -223,7 +212,7 @@ def select_files_model():
     root = Tk()
     root.withdraw()
     root.call("wm", "attributes", ".", "-topmost", True)
-    files = filedialog.askopenfilename(initialdir="models/cellpose")
+    files = filedialog.askopenfilename(initialdir=Path().cwd().parent / "models/cellpose")
     print(files)
     return Path(files)
 
@@ -283,9 +272,9 @@ class AppUI(param.Parameterized):
         self.select_green_cellpose_model_btn = pn.widgets.Button(name="Select Red CellPose Model")
         self.select_green_cellpose_model_btn.on_click(self.select_green_model)
 
-        self.segment_one_btn = pn.widgets.Button(name="Segment one frame")
+        self.segment_one_btn = pn.widgets.Button(name="Segment one frame", button_type="primary")
         self.segment_one_btn.on_click(self.segment_one)
-        self.segment_all_btn = pn.widgets.Button(name="Segment stack")
+        self.segment_all_btn = pn.widgets.Button(name="Segment stack", button_type="primary")
         self.segment_all_btn.on_click(self.segment_stack)
         self.segmentation_progress = pn.widgets.Tqdm(width=300)
 
@@ -324,7 +313,7 @@ class AppUI(param.Parameterized):
         root = Tk()
         root.withdraw()
         root.call("wm", "attributes", ".", "-topmost", True)
-        files = filedialog.askdirectory(initialdir="data/fucci_60_frames")
+        files = filedialog.askdirectory(initialdir=Path().cwd().parent / "data")
         # files = filedialog.askdirectory(
         #     initialdir=r"D:\Data\full_pipeline_tests\left_60_frames"
         # )
@@ -359,12 +348,13 @@ class AppUI(param.Parameterized):
         self.run_tracking_btn.disabled = True
         sys.stdout = self.tracking_terminal
 
+        (Path(self.data_dir_path) / "metric.h5").unlink(missing_ok=True)
         run_trackmate(
-            Path("models/trackmate/basic_settings.xml"),
+            Path().cwd().parent / "models/trackmate/basic_settings.xml",
             Path(self.data_dir_path) / "red_segmented.tiff",
         )
         run_trackmate(
-            Path("models/trackmate/basic_settings.xml"),
+            Path().cwd().parent / "models/trackmate/basic_settings.xml",
             Path(self.data_dir_path) / "green_segmented.tiff",
         )
 
@@ -375,16 +365,16 @@ class AppUI(param.Parameterized):
         pass
 
     def segment_stack(self, event):
-        # segment_stack(
-        #     path=Path(self.red_path),
-        #     model=Path(self.red_model_path),
-        #     panel_tqdm_instance=self.segmentation_progress,
-        # )
-        # segment_stack(
-        #     path=Path(self.green_path),
-        #     model=Path(self.green_model_path),
-        #     panel_tqdm_instance=self.segmentation_progress,
-        # )
+        segment_stack(
+            path=Path(self.red_path),
+            model=Path(self.red_model_path),
+            panel_tqdm_instance=self.segmentation_progress,
+        )
+        segment_stack(
+            path=Path(self.green_path),
+            model=Path(self.green_model_path),
+            panel_tqdm_instance=self.segmentation_progress,
+        )
 
         self.main[:, :] = "# Segmentation\nPlease close viewer to continue"
 
@@ -408,19 +398,27 @@ class AppUI(param.Parameterized):
         return self.analysis_ui.flow if self.analysis_available else None
 
     def run_analysis(self, event):
+        self.run_analysis_btn.disabled = True
         self.analysis_available = False
         tm_red = TrackmateXML(Path(self.data_dir_path) / "red_segmented.tiff.xml")
         tm_green = TrackmateXML(Path(self.data_dir_path) / "green_segmented.tiff.xml")
 
-        metric_df = pd.read_hdf(Path(self.data_dir_path) / "metric.h5", key="metric")
-        self.metric = CartesianSimilarityFromFile(tm_red, tm_green, metric_df)
+        metric_path = Path(self.data_dir_path) / "metric.h5"
+        if metric_path.exists():
+            metric_df = pd.read_hdf(metric_path, key="metric")
+            self.metric = CartesianSimilarityFromFile(tm_red, tm_green, metric_df)
+        else:
+            self.metric = CartesianSimilarity(tm_red, tm_green)
+            metric_df = self.metric.calculate_metric_for_all_tracks()
+            metric_df.to_hdf(metric_path, key="metric")
 
         self.analysis_ui = CollectiveStats(self.metric, Path(self.data_dir_path) / "phase.tif")
 
         self.analysis_available = True
+        self.run_analysis_btn.disabled = False
 
     def get_sidebar(self):
-        sidebar = pn.Accordion(toggle=True)
+        sidebar = pn.Accordion(toggle=True, sizing_mode='stretch_width')
 
         sidebar.append(
             (

@@ -32,7 +32,7 @@ def segment_stack(path: Path, model: Path, export_tiff: bool = True, panel_tqdm_
     print(f"segmenting stack at {path} with model at {model}")
     stack = read_stack(path)
 
-    frames, y, x = stack.shape
+    frames, Y, X = stack.shape
 
     new_file_path = path.parent / f"{path.stem}_segmented.h5"
     dataset_name = "data"
