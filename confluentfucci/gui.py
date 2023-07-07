@@ -1,4 +1,5 @@
 import sys
+import traceback
 from pathlib import Path
 from time import sleep
 from tkinter import (
@@ -6,6 +7,7 @@ from tkinter import (
     filedialog,
 )
 
+import cellpose.core
 import holoviews as hv
 import hvplot.pandas
 import napari
@@ -17,6 +19,7 @@ from dask_image.imread import imread
 from shapely import Polygon
 from skimage.exposure import equalize_adapthist
 from utils import (
+    get_docker_client,
     read_stack,
     run_trackmate,
     segment_stack,
@@ -250,6 +253,28 @@ def view_segmented(data_dir_path):
     napari.run(force=True, gui_exceptions=True)
 
 
+def trackmate_available():
+    try:
+        get_docker_client().images.pull('leogold/trackmate:v1')
+        return True
+    except Exception as e:
+        print(traceback.format_exc())
+        return False
+
+
+def check_cellpose_gpu():
+    return cellpose.core.use_gpu()
+
+
+def check_docker():
+    try:
+        get_docker_client().ping()
+        return True
+    except Exception as e:
+        print(traceback.format_exc())
+        return False
+
+
 class AppUI(param.Parameterized):
     data_dir_path = param.Path()
     red_path = param.Path()
@@ -259,17 +284,23 @@ class AppUI(param.Parameterized):
     green_model_path = param.Path()
     analysis_available = param.Boolean(default=False)
 
+    docker_check = param.Boolean(default=False)
+    gpu_check = param.Boolean(default=False)
+    trackmate_check = param.Boolean(default=False)
+
     def __init__(self, **params):
         super().__init__(**params)
         self.validate_btn = pn.widgets.Button(name="Validate Install", button_type="danger")
         self.validate_btn.on_click(self.validate_install)
         pn.state.onload(self.validate_install)
 
-        self.select_data_path_btn = pn.widgets.Button(name="Select Data Path")
+        self.select_data_path_btn = pn.widgets.Button(name="Select Data Path", button_type="primary")
         self.select_data_path_btn.on_click(self.select_data_folder)
-        self.select_red_cellpose_model_btn = pn.widgets.Button(name="Select Red CellPose Model")
+        self.select_red_cellpose_model_btn = pn.widgets.Button(name="Select Red CellPose Model", button_type="primary")
         self.select_red_cellpose_model_btn.on_click(self.select_red_model)
-        self.select_green_cellpose_model_btn = pn.widgets.Button(name="Select Red CellPose Model")
+        self.select_green_cellpose_model_btn = pn.widgets.Button(
+            name="Select Green CellPose Model", button_type="primary"
+        )
         self.select_green_cellpose_model_btn.on_click(self.select_green_model)
 
         self.segment_one_btn = pn.widgets.Button(name="Segment one frame", button_type="primary")
@@ -305,8 +336,18 @@ class AppUI(param.Parameterized):
 
     def validate_install(self, event=None):
         self.validate_btn.disabled = True
+
+        self.docker_check, self.trackmate_check, self.gpu_check = False, False, False
+
+        self.docker_check = True if check_docker() else False
+        self.trackmate_check = True if trackmate_available() else False
+        self.gpu_check = True if check_cellpose_gpu() else False
+
         sleep(2)
-        self.validate_btn.button_type = "success"
+        if all([self.docker_check, self.trackmate_check, self.gpu_check]):
+            self.validate_btn.button_type = "success"
+        else:
+            self.validate_btn.button_type = "danger"
         self.validate_btn.disabled = False
 
     def select_data_folder(self, *b):
@@ -476,10 +517,29 @@ class AppUI(param.Parameterized):
 
         return template
 
+    @param.depends("docker_check", "trackmate_check", 'gpu_check')
+    def get_welcome_message(self):
+        # Docker: {🕑 if self.docker_check is None or (✅ if self.docker_check else ❌)}
+
+        text = pn.pane.Markdown(
+            f"""# Welcome
+See you soon
+                
+## Status check 
+GPU: {'✅' if self.gpu_check else '❌'} {'See [link](example.com) for advice' if not self.gpu_check else ''}
+
+Docker: {'✅' if self.docker_check else '❌'} {'See [link](example.com) for advice' if not self.docker_check else ''}
+
+TrackMate: {'✅' if self.trackmate_check else '❌'} {'See [link](example.com) for advice' if not self.trackmate_check else ''}
+""",
+            dedent=True,
+        )
+        return text
+
     def update_main(self, event):
         # print(event)
         if event.new[0] == 0:
-            self.main[:, :] = "# Welcome\nSee you soon"
+            self.main[:, :] = self.get_welcome_message
         elif event.new[0] == 1:
             self.main[:, :] = pn.Column(
                 f"# input",

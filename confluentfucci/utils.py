@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -117,8 +118,25 @@ def run_trackmate(settings_path: Path, data_path: Path) -> None:
     print(f"Tracking on {data_path} complete")
 
 
-try:
-    docker_client = DockerClient()
-except Exception:
-    print("Failed to initialize local Docker client, running TrackMate disabled")
-    docker_client = None
+_docker_client = None
+
+
+def get_docker_client():
+    global _docker_client
+    try:
+        if _docker_client:
+            return _docker_client
+        else:
+            _docker_client = DockerClient()
+            return _docker_client
+    except Exception as e:
+        print(traceback.format_exc())
+        return None
+
+
+get_docker_client()
+# try:
+#     _docker_client = DockerClient()
+# except Exception:
+#     print("Failed to initialize local Docker client, running TrackMate disabled")
+#     _docker_client = None
