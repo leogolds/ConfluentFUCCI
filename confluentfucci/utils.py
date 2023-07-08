@@ -101,7 +101,7 @@ def run_trackmate(settings_path: Path, data_path: Path) -> None:
         read_only=False,
     )
 
-    container = docker_client.containers.run(
+    container = _docker_client.containers.run(
         image="leogold/trackmate:v1",
         detach=True,
         mounts=[settings_mount, data_mount],
