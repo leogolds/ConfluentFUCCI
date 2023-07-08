@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ConfluentFUCCI"
-version = "0.0.13"
+version = "0.0.12"
 description = ""
 authors = ["Leo Goldstien <leogoldstien@gmail.com>"]
 readme = "README.md"
@@ -217,7 +217,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.semantic_release]
-version_variable = "pyproject.toml:version" # version location
+version_toml = "pyproject.toml:tool.poetry.version" # version location
 branch = "main"                             # branch to make releases of
 changelog_file = "CHANGELOG.md"             # changelog file
 build_command = "poetry build"              # build dists
