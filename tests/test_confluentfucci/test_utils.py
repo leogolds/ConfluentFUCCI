@@ -9,7 +9,7 @@ from confluentfucci import utils
 
 @pytest.fixture()
 def test_stack():
-    path = Path('../resources/test_red_stack.tiff')
+    path = Path().cwd().parent / 'resources/test_red_stack.tiff'
 
     yield path
 
