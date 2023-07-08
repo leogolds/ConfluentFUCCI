@@ -6,10 +6,12 @@ import pytest
 
 from confluentfucci import utils
 
+tests_folder_path = Path(__file__).parent.parent
+
 
 @pytest.fixture()
 def test_stack():
-    path = Path(__file__).parent.parent / 'resources/test_red_stack.tiff'
+    path = tests_folder_path / 'resources/test_red_stack.tiff'
 
     yield path
 
@@ -23,7 +25,7 @@ def test_read_stack(test_stack) -> None:
 
 
 def test_analysis_pipeline(test_stack) -> None:
-    model = Path('../../models/cellpose/nuclei_red_v2')
+    model = tests_folder_path.parent / 'models/cellpose/nuclei_red_v2'
 
     utils.segment_stack(path=test_stack, model=model)
 
@@ -35,7 +37,7 @@ def test_analysis_pipeline(test_stack) -> None:
     assert segmented[1].max() == 40
     assert segmented[2].max() == 39
 
-    settings = Path('../../models/trackmate/basic_settings.xml')
+    settings = tests_folder_path.parent / 'models/trackmate/basic_settings.xml'
     utils.run_trackmate(settings_path=settings, data_path=segmented_path)
 
     result_path = segmented_path.parent / 'test_red_stack_segmented.tiff.xml'
