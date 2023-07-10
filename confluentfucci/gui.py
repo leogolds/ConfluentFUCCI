@@ -18,12 +18,6 @@ import param
 from dask_image.imread import imread
 from shapely import Polygon
 from skimage.exposure import equalize_adapthist
-from utils import (
-    get_docker_client,
-    read_stack,
-    run_trackmate,
-    segment_stack,
-)
 
 from confluentfucci.math import (
     CartesianSimilarity,
@@ -32,6 +26,12 @@ from confluentfucci.math import (
     compute_voronoi,
     compute_voronoi_stats,
     filter_voronoi_tiling,
+)
+from confluentfucci.utils import (
+    get_docker_client,
+    read_stack,
+    run_trackmate,
+    segment_stack,
 )
 
 pn.extension("terminal")
@@ -215,7 +215,7 @@ def select_files_model():
     root = Tk()
     root.withdraw()
     root.call("wm", "attributes", ".", "-topmost", True)
-    files = filedialog.askopenfilename(initialdir=Path().cwd().parent / "models/cellpose")
+    files = filedialog.askopenfilename(initialdir=Path("__file__").cwd().parent / "models/cellpose")
     print(files)
     return Path(files)
 
@@ -255,7 +255,7 @@ def view_segmented(data_dir_path):
 
 def trackmate_available():
     try:
-        get_docker_client().images.pull('leogold/trackmate:v1')
+        get_docker_client().images.pull("leogold/trackmate:v1")
         return True
     except Exception as e:
         print(traceback.format_exc())
@@ -354,7 +354,9 @@ class AppUI(param.Parameterized):
         root = Tk()
         root.withdraw()
         root.call("wm", "attributes", ".", "-topmost", True)
-        files = filedialog.askdirectory(initialdir=Path().cwd().parent / "data")
+        initial_dir = Path("__file__").cwd().parent.parent / "data"
+        print(initial_dir.absolute(), initial_dir.exists())
+        files = filedialog.askdirectory(initialdir=initial_dir)
         # files = filedialog.askdirectory(
         #     initialdir=r"D:\Data\full_pipeline_tests\left_60_frames"
         # )
@@ -391,11 +393,11 @@ class AppUI(param.Parameterized):
 
         (Path(self.data_dir_path) / "metric.h5").unlink(missing_ok=True)
         run_trackmate(
-            Path().cwd().parent / "models/trackmate/basic_settings.xml",
+            Path("__file__").cwd().parent / "models/trackmate/basic_settings.xml",
             Path(self.data_dir_path) / "red_segmented.tiff",
         )
         run_trackmate(
-            Path().cwd().parent / "models/trackmate/basic_settings.xml",
+            Path("__file__").cwd().parent / "models/trackmate/basic_settings.xml",
             Path(self.data_dir_path) / "green_segmented.tiff",
         )
 
@@ -459,7 +461,7 @@ class AppUI(param.Parameterized):
         self.run_analysis_btn.disabled = False
 
     def get_sidebar(self):
-        sidebar = pn.Accordion(toggle=True, sizing_mode='stretch_width')
+        sidebar = pn.Accordion(toggle=True, sizing_mode="stretch_width")
 
         sidebar.append(
             (
@@ -517,7 +519,7 @@ class AppUI(param.Parameterized):
 
         return template
 
-    @param.depends("docker_check", "trackmate_check", 'gpu_check')
+    @param.depends("docker_check", "trackmate_check", "gpu_check")
     def get_welcome_message(self):
         # Docker: {🕑 if self.docker_check is None or (✅ if self.docker_check else ❌)}
 
@@ -626,7 +628,7 @@ def visualize_flow_field(flow_field_df, red_stack, frame=30, min_magnitude=0):
 # calibration_squared_microns_to_squared_pixel = pixel_size_in_microns**2
 
 # AppUI().template.servable()
-AppUI().template.show()
+# AppUI().template.show()
 
 # pn.Row(
 #     pn.widgets.Button(
@@ -636,7 +638,7 @@ AppUI().template.show()
 # ).servable()
 
 if __name__ == "__main__":
-    AppUI().get_template().servable()
+    AppUI().get_template().show()
     # magnification_towards_camera = 1
     # # pixel_size_in_microns = 0.345 * magnification_towards_camera
     # pixel_size_in_microns = 0.67 * magnification_towards_camera
