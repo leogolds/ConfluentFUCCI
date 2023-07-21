@@ -511,7 +511,7 @@ class AppUI(param.Parameterized):
 
     def get_template(self):
         template = pn.template.BootstrapTemplate(
-            title="PyFucciTrack",
+            title="ConfluentFUCCI",
             theme_toggle=False,
             sidebar=[self.sidebar],
             main=self.main,
