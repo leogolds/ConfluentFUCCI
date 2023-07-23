@@ -19,6 +19,7 @@ from dask_image.imread import imread
 from shapely import Polygon
 from skimage.exposure import equalize_adapthist
 
+from confluentfucci import data
 from confluentfucci.math import (
     CartesianSimilarity,
     CartesianSimilarityFromFile,
@@ -212,10 +213,11 @@ class CollectiveStats:
 
 
 def select_files_model():
+    red_model, green_model = data.fetch_red_model(), data.fetch_green_model()
     root = Tk()
     root.withdraw()
     root.call("wm", "attributes", ".", "-topmost", True)
-    files = filedialog.askopenfilename(initialdir=Path("__file__").cwd().parent / "models/cellpose")
+    files = filedialog.askopenfilename(initialdir=red_model.parent)
     print(files)
     return Path(files)
 
@@ -354,14 +356,13 @@ class AppUI(param.Parameterized):
         root = Tk()
         root.withdraw()
         root.call("wm", "attributes", ".", "-topmost", True)
-        initial_dir = Path("__file__").cwd().parent.parent / "data"
-        print(initial_dir.absolute(), initial_dir.exists())
-        files = filedialog.askdirectory(initialdir=initial_dir)
+        short_data, long_data = data.fetch_short_example_data(), data.fetch_long_example_data()
+        files = filedialog.askdirectory(initialdir=short_data[0].parent.parent)
         # files = filedialog.askdirectory(
         #     initialdir=r"D:\Data\full_pipeline_tests\left_60_frames"
         # )
 
-        print(files)
+        # print(files)
         self.data_dir_path = Path(files)
 
         red_path = Path(self.data_dir_path) / "red.tif"
@@ -393,11 +394,11 @@ class AppUI(param.Parameterized):
 
         (Path(self.data_dir_path) / "metric.h5").unlink(missing_ok=True)
         run_trackmate(
-            Path("__file__").cwd().parent / "models/trackmate/basic_settings.xml",
+            data.fetch_trackmate_settings(),
             Path(self.data_dir_path) / "red_segmented.tiff",
         )
         run_trackmate(
-            Path("__file__").cwd().parent / "models/trackmate/basic_settings.xml",
+            data.fetch_trackmate_settings(),
             Path(self.data_dir_path) / "green_segmented.tiff",
         )
 

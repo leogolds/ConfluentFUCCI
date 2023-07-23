@@ -10,6 +10,9 @@ import h5py
 import numpy as np
 import psutil
 import tifffile
+
+# from aicsimageio.transforms import reshape_data
+from aicsimageio.writers import OmeTiffWriter
 from cellpose import models
 from docker.client import DockerClient
 from docker.types import Mount
@@ -55,8 +58,13 @@ def segment_stack(path: Path, model: Path, export_tiff: bool = True, panel_tqdm_
         if export_tiff:
             new_tiff_path = path.parent / f"{path.stem}_segmented.tiff"
             print(f"exporting to tiff at {new_tiff_path}")
-            with tifffile.TiffWriter(new_tiff_path, bigtiff=True) as tif:
-                tif.write(f.get(dataset_name), shape=(frames, Y, X))
+            # TODO wtf? why is tifffile stopped writing TrackMate compatible files?
+            OmeTiffWriter.save(f.get(dataset_name).__array__(), new_tiff_path, dim_order='TYX')
+            # reshaped = reshape_data(f.get(dataset_name), "TYX", "ZTCYX")
+            # tifffile.imwrite(new_tiff_path, f.get(dataset_name), bigtiff=True)
+            # with tifffile.TiffWriter(new_tiff_path, bigtiff=True) as tif:
+            #     tif.write(f.get(dataset_name), shape=(frames, Y, X), metadata={'axes': 'TYX'})
+            # tif.write(reshaped, shape=reshaped.shape)
 
     print("segmentation complete")
 
