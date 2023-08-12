@@ -87,8 +87,8 @@ class TrackmateXML:
             if not root.tag == "TrackMate":
                 raise ValueError("Not a TrackmateXML")
             self.version = root.attrib["version"]
-            self.spots = self.__loadspots(root)
             self.tracks = self.__loadtracks(root)
+            self.spots = self.__loadspots(root)
             self.filteredtracks = self.__loadfilteredtracks(root)
         else:
             raise ValueError("{0} is not avalid file suffix".format(self.pth.suffix))
@@ -270,10 +270,16 @@ def compute_voronoi_stats(df):
 
 
 class CartesianSimilarity:
-    def __init__(self, tm_red: TrackmateXML, tm_green: TrackmateXML):
+    def __init__(
+        self,
+        tm_red: TrackmateXML,
+        tm_green: TrackmateXML,
+        shape: tuple[int, int] = None,
+    ):
         self.metric_df = pd.DataFrame()
         self.tm_red = tm_red
         self.tm_green = tm_green
+        self.shape = shape
 
     @cache
     def calculate_metric(self, green_track_id, red_track_id):
@@ -298,15 +304,35 @@ class CartesianSimilarity:
 
         return sse / (max_frame - min_frame)
 
-    def calculate_metric_for_all_tracks(self):
-        red_track_ids = self.tm_green.tracks.TrackID.unique().tolist()
+    def get_all_combinations(self):
+        red_track_ids = self.tm_red.tracks.TrackID.unique().tolist()
         green_track_ids = self.tm_green.tracks.TrackID.unique().tolist()
-        combinations = list(
+
+        return list(
             itertools.product(
                 red_track_ids,
                 green_track_ids,
             )
         )
+
+    def calculate_metric_for_all_tracks(self):
+        combinations = self.get_all_combinations()
+        print(f'{len(combinations)}')
+
+        metrics = [
+            self.calculate_metric(g, r) for r, g in tqdm.tqdm(combinations, desc="Calculating similarity metric")
+        ]
+        df = pd.DataFrame(columns=["red_track", "green_track"], data=combinations)
+        df["metric"] = metrics
+
+        self.metric_df = df.sort_values("metric").reset_index(drop=True)
+        return self.metric_df
+
+    def calculate_metric_for_all_tracks_with_prefilter(self):
+        # red_track_ids = self.tm_green.tracks.TrackID.unique().tolist()
+        # green_track_ids = self.tm_green.tracks.TrackID.unique().tolist()
+        combinations = self.get_likely_combinations(shape=self.shape, n_bins=5)
+        print(f'{len(combinations)}')
 
         metrics = [
             self.calculate_metric(g, r) for r, g in tqdm.tqdm(combinations, desc="Calculating similarity metric")
@@ -530,6 +556,48 @@ class CartesianSimilarity:
         )
 
         return c
+
+    def get_likely_combinations(self, shape, n_bins):
+        slice_spots_into_grid(self.tm_red.spots, n_bins, shape)
+        slice_spots_into_grid(self.tm_green.spots, n_bins, shape)
+
+        a = attach_track_ids(self.tm_red.spots, self.tm_red.tracks)
+        b = attach_track_ids(self.tm_green.spots, self.tm_green.tracks)
+
+        gridded_red_tracks = (
+            a.groupby(['x_bin', 'y_bin']).TrackID.unique().to_frame().rename({'TrackID': 'red_track_id'}, axis=1)
+        )
+        gridded_green_tracks = (
+            b.groupby(['x_bin', 'y_bin']).TrackID.unique().to_frame().rename({'TrackID': 'green_track_id'}, axis=1)
+        )
+
+        matched_tracks_df = gridded_red_tracks.merge(gridded_green_tracks, left_index=True, right_index=True).dropna()
+
+        return set(
+            itertools.chain.from_iterable(
+                [itertools.product(*matched_tracks_df.values[i]) for i in range(len(matched_tracks_df))]
+            )
+        )
+        print("asdf")
+
+
+def attach_track_ids(spots_df, tracks_df):
+    flat_tracks = pd.concat(
+        [
+            tracks_df[["TrackID", "SPOT_SOURCE_ID"]].rename(columns={'SPOT_SOURCE_ID': 'SPOT_ID'}),
+            tracks_df[["TrackID", "SPOT_TARGET_ID"]].rename(columns={'SPOT_TARGET_ID': 'SPOT_ID'}),
+        ],
+        ignore_index=True,
+    )
+    return spots_df.merge(flat_tracks, how='inner', left_on='ID', right_on='SPOT_ID')
+
+
+def slice_spots_into_grid(spots_df, n_bins, shape):
+    x_interval_range = pd.interval_range(start=0, end=shape[1], freq=shape[1] / n_bins)
+    spots_df["x_grid_interval"] = pd.cut(spots_df.POSITION_X, x_interval_range)
+    spots_df["x_bin"] = spots_df.x_grid_interval.cat.rename_categories([int(i.mid) for i in x_interval_range])
+    spots_df["y_grid_interval"] = pd.cut(spots_df.POSITION_X, x_interval_range)
+    spots_df["y_bin"] = spots_df.y_grid_interval.cat.rename_categories([int(i.mid) for i in x_interval_range])
 
 
 class CartesianSimilarityFromFile(CartesianSimilarity):
