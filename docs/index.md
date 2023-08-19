@@ -8,7 +8,7 @@ A suite of tools for analyzing large scale confluent FUCCI experiments
 
 ### Installation
 #### Windows (no Python)
-We provide the following [script](https://github.com/leogolds/ConfluentFUCCI/install-confluentfucci-windows.bat) to simplify installation. To use, please save the script and run it as administrator.
+We provide the following [script](https://raw.githubusercontent.com/leogolds/ConfluentFUCCI/main/install-confluentfucci-windows.bat) to simplify installation. To use, please save the script and run it as administrator.
 
 This script will:
 
