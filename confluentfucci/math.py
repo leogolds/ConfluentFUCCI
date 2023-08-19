@@ -317,7 +317,7 @@ class CartesianSimilarity:
 
     def calculate_metric_for_all_tracks(self):
         combinations = self.get_all_combinations()
-        print(f'{len(combinations)}')
+        print(f"{len(combinations)}")
 
         metrics = [
             self.calculate_metric(g, r) for r, g in tqdm.tqdm(combinations, desc="Calculating similarity metric")
@@ -332,7 +332,7 @@ class CartesianSimilarity:
         # red_track_ids = self.tm_green.tracks.TrackID.unique().tolist()
         # green_track_ids = self.tm_green.tracks.TrackID.unique().tolist()
         combinations = self.get_likely_combinations(shape=self.shape, n_bins=5)
-        print(f'{len(combinations)}')
+        print(f"{len(combinations)}")
 
         metrics = [
             self.calculate_metric(g, r) for r, g in tqdm.tqdm(combinations, desc="Calculating similarity metric")
@@ -558,36 +558,45 @@ class CartesianSimilarity:
         return c
 
     def get_likely_combinations(self, shape, n_bins):
+        """
+        Likely combinations are ones where at least one spot in a red track shares the same grid square as at least one spot in a green track
+        """
         slice_spots_into_grid(self.tm_red.spots, n_bins, shape)
         slice_spots_into_grid(self.tm_green.spots, n_bins, shape)
 
-        a = attach_track_ids(self.tm_red.spots, self.tm_red.tracks)
-        b = attach_track_ids(self.tm_green.spots, self.tm_green.tracks)
+        red = attach_track_ids(self.tm_red.spots, self.tm_red.tracks)
+        green = attach_track_ids(self.tm_green.spots, self.tm_green.tracks)
 
+        # Find unique tracks in each grid square for red/green tracks
         gridded_red_tracks = (
-            a.groupby(['x_bin', 'y_bin']).TrackID.unique().to_frame().rename({'TrackID': 'red_track_id'}, axis=1)
+            red.groupby(["x_bin", "y_bin"]).TrackID.unique().to_frame().rename({"TrackID": "red_track_id"}, axis=1)
         )
         gridded_green_tracks = (
-            b.groupby(['x_bin', 'y_bin']).TrackID.unique().to_frame().rename({'TrackID': 'green_track_id'}, axis=1)
+            green.groupby(["x_bin", "y_bin"]).TrackID.unique().to_frame().rename({"TrackID": "green_track_id"}, axis=1)
         )
+        # inner join based on grid square
         matched_tracks_df = gridded_red_tracks.merge(gridded_green_tracks, left_index=True, right_index=True).dropna()
 
+        # Find unique tracks in each shifted grid square for red/green tracks
         gridded_red_tracks_shifted = (
-            a.groupby(['x_bin_shifted', 'y_bin_shifted'])
+            red.groupby(["x_bin_shifted", "y_bin_shifted"])
             .TrackID.unique()
             .to_frame()
-            .rename({'TrackID': 'red_track_id'}, axis=1)
+            .rename({"TrackID": "red_track_id"}, axis=1)
         )
         gridded_green_tracks_shifted = (
-            b.groupby(['x_bin_shifted', 'y_bin_shifted'])
+            green.groupby(["x_bin_shifted", "y_bin_shifted"])
             .TrackID.unique()
             .to_frame()
-            .rename({'TrackID': 'green_track_id'}, axis=1)
+            .rename({"TrackID": "green_track_id"}, axis=1)
         )
+        # inner join based on shifted grid square
         shifted_matched_tracks_df = gridded_red_tracks_shifted.merge(
             gridded_green_tracks_shifted, left_index=True, right_index=True
         ).dropna()
 
+        # unpack unique tracks in grid squares and calculate product grid square wise
+        # Find set of red/green track combinations
         matched_tracks_set = set(
             itertools.chain.from_iterable(
                 [itertools.product(*matched_tracks_df.values[i]) for i in range(len(matched_tracks_df))]
@@ -599,22 +608,34 @@ class CartesianSimilarity:
             )
         )
 
+        # return union of shifted/unshifted sets
         return matched_tracks_set.union(shifted_matched_tracks_set)
         print("asdf")
 
 
 def attach_track_ids(spots_df, tracks_df):
+    """
+    flatten the tracks_df so that we get have direct mapping between TrackID and SPOT_SOURCE_ID/SPOT_TARGET_ID
+    An inner join betwen flattened tracks and spots leavs us with a spot id to TrackID mapping
+    """
     flat_tracks = pd.concat(
         [
-            tracks_df[["TrackID", "SPOT_SOURCE_ID"]].rename(columns={'SPOT_SOURCE_ID': 'SPOT_ID'}),
-            tracks_df[["TrackID", "SPOT_TARGET_ID"]].rename(columns={'SPOT_TARGET_ID': 'SPOT_ID'}),
+            tracks_df[["TrackID", "SPOT_SOURCE_ID"]].rename(columns={"SPOT_SOURCE_ID": "SPOT_ID"}),
+            tracks_df[["TrackID", "SPOT_TARGET_ID"]].rename(columns={"SPOT_TARGET_ID": "SPOT_ID"}),
         ],
         ignore_index=True,
     )
-    return spots_df.merge(flat_tracks, how='inner', left_on='ID', right_on='SPOT_ID')
+    return spots_df.merge(flat_tracks, how="inner", left_on="ID", right_on="SPOT_ID")
 
 
 def slice_spots_into_grid(spots_df, n_bins, shape):
+    """
+    Define grid of size image_size/n_bins for each axis
+    Discretize spot location into the resulting bins
+    Similarly, discritize spots based on a grid that's shifted by half the grid square size
+    These two bins are used to match likely valid tracks
+    i.e. a red track worth checking is one that at least one of it's spots is in the same grid square as another green track spot
+    """
     x_interval_range = pd.interval_range(start=0, end=shape[1], freq=shape[1] / n_bins)
     spots_df["x_grid_interval"] = pd.cut(spots_df.POSITION_X, x_interval_range)
     spots_df["x_bin"] = spots_df.x_grid_interval.cat.rename_categories([int(i.mid) for i in x_interval_range])
