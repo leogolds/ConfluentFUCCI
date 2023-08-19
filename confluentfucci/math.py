@@ -570,14 +570,36 @@ class CartesianSimilarity:
         gridded_green_tracks = (
             b.groupby(['x_bin', 'y_bin']).TrackID.unique().to_frame().rename({'TrackID': 'green_track_id'}, axis=1)
         )
-
         matched_tracks_df = gridded_red_tracks.merge(gridded_green_tracks, left_index=True, right_index=True).dropna()
 
-        return set(
+        gridded_red_tracks_shifted = (
+            a.groupby(['x_bin_shifted', 'y_bin_shifted'])
+            .TrackID.unique()
+            .to_frame()
+            .rename({'TrackID': 'red_track_id'}, axis=1)
+        )
+        gridded_green_tracks_shifted = (
+            b.groupby(['x_bin_shifted', 'y_bin_shifted'])
+            .TrackID.unique()
+            .to_frame()
+            .rename({'TrackID': 'green_track_id'}, axis=1)
+        )
+        shifted_matched_tracks_df = gridded_red_tracks_shifted.merge(
+            gridded_green_tracks_shifted, left_index=True, right_index=True
+        ).dropna()
+
+        matched_tracks_set = set(
             itertools.chain.from_iterable(
                 [itertools.product(*matched_tracks_df.values[i]) for i in range(len(matched_tracks_df))]
             )
         )
+        shifted_matched_tracks_set = set(
+            itertools.chain.from_iterable(
+                [itertools.product(*shifted_matched_tracks_df.values[i]) for i in range(len(shifted_matched_tracks_df))]
+            )
+        )
+
+        return matched_tracks_set.union(shifted_matched_tracks_set)
         print("asdf")
 
 
@@ -596,8 +618,24 @@ def slice_spots_into_grid(spots_df, n_bins, shape):
     x_interval_range = pd.interval_range(start=0, end=shape[1], freq=shape[1] / n_bins)
     spots_df["x_grid_interval"] = pd.cut(spots_df.POSITION_X, x_interval_range)
     spots_df["x_bin"] = spots_df.x_grid_interval.cat.rename_categories([int(i.mid) for i in x_interval_range])
-    spots_df["y_grid_interval"] = pd.cut(spots_df.POSITION_X, x_interval_range)
-    spots_df["y_bin"] = spots_df.y_grid_interval.cat.rename_categories([int(i.mid) for i in x_interval_range])
+
+    y_interval_range = pd.interval_range(start=0, end=shape[1], freq=shape[0] / n_bins)
+    spots_df["y_grid_interval"] = pd.cut(spots_df.POSITION_X, y_interval_range)
+    spots_df["y_bin"] = spots_df.y_grid_interval.cat.rename_categories([int(i.mid) for i in y_interval_range])
+
+    shift_amount_x = shape[1] / n_bins / 2
+    x_interval_range = pd.interval_range(start=-shift_amount_x, end=shape[1] + shift_amount_x, freq=shape[1] / n_bins)
+    spots_df["x_grid_interval_shifted"] = pd.cut(spots_df.POSITION_X, x_interval_range)
+    spots_df["x_bin_shifted"] = spots_df.x_grid_interval_shifted.cat.rename_categories(
+        [int(i.mid) for i in x_interval_range]
+    )
+
+    shift_amount_y = shape[0] / n_bins / 2
+    y_interval_range = pd.interval_range(start=-shift_amount_y, end=shape[1] + shift_amount_y, freq=shape[0] / n_bins)
+    spots_df["y_grid_interval_shifted"] = pd.cut(spots_df.POSITION_X, y_interval_range)
+    spots_df["y_bin_shifted"] = spots_df.y_grid_interval_shifted.cat.rename_categories(
+        [int(i.mid) for i in y_interval_range]
+    )
 
 
 class CartesianSimilarityFromFile(CartesianSimilarity):
