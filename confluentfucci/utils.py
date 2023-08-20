@@ -56,17 +56,17 @@ def segment_stack(
         )
 
         if panel_red_tqdm_instance:
-            frame_itertor = panel_red_tqdm_instance(
+            frame_iterator = panel_red_tqdm_instance(
                 range(frames), desc="Red", colour="#ff0000"
             )
         elif panel_green_tqdm_instance:
-            frame_itertor = panel_green_tqdm_instance(
+            frame_iterator = panel_green_tqdm_instance(
                 range(frames), desc="Green", colour="#008000"
             )
         else:
-            trange(frames)
+            frame_iterator = trange(frames)
 
-        for frame in frame_itertor:
+        for frame in frame_iterator:
             masks, center_of_mass = _segment_frame(stack[frame, ...], model, gpu=True)
             dataset[frame, :, :] = masks
 
