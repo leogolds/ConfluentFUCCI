@@ -31,7 +31,13 @@ def read_stack(path: Path) -> np.ndarray:
         return tifffile.imread(path)
 
 
-def segment_stack(path: Path, model: Path, export_tiff: bool = True, panel_tqdm_instance=None):
+def segment_stack(
+    path: Path,
+    model: Path,
+    export_tiff: bool = True,
+    panel_red_tqdm_instance=None,
+    panel_green_tqdm_instance=None,
+):
     """Segment stack frame by frame."""
     print(f"segmenting stack at {path} with model at {model}")
     stack = read_stack(path)
@@ -49,7 +55,16 @@ def segment_stack(path: Path, model: Path, export_tiff: bool = True, panel_tqdm_
             chunks=True,
         )
 
-        frame_itertor = panel_tqdm_instance(range(frames)) if panel_tqdm_instance else trange(frames)
+        if panel_red_tqdm_instance:
+            frame_itertor = panel_red_tqdm_instance(
+                range(frames), desc="Red", colour="#ff0000"
+            )
+        elif panel_green_tqdm_instance:
+            frame_itertor = panel_green_tqdm_instance(
+                range(frames), desc="Green", colour="#008000"
+            )
+        else:
+            trange(frames)
 
         for frame in frame_itertor:
             masks, center_of_mass = _segment_frame(stack[frame, ...], model, gpu=True)
@@ -59,7 +74,9 @@ def segment_stack(path: Path, model: Path, export_tiff: bool = True, panel_tqdm_
             new_tiff_path = path.parent / f"{path.stem}_segmented.tiff"
             print(f"exporting to tiff at {new_tiff_path}")
             # TODO wtf? why is tifffile stopped writing TrackMate compatible files?
-            OmeTiffWriter.save(f.get(dataset_name).__array__(), new_tiff_path, dim_order='TYX')
+            OmeTiffWriter.save(
+                f.get(dataset_name).__array__(), new_tiff_path, dim_order="TYX"
+            )
             # reshaped = reshape_data(f.get(dataset_name), "TYX", "ZTCYX")
             # tifffile.imwrite(new_tiff_path, f.get(dataset_name), bigtiff=True)
             # with tifffile.TiffWriter(new_tiff_path, bigtiff=True) as tif:

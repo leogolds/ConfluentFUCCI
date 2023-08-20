@@ -328,14 +328,17 @@ class CartesianSimilarity:
         self.metric_df = df.sort_values("metric").reset_index(drop=True)
         return self.metric_df
 
-    def calculate_metric_for_all_tracks_with_prefilter(self):
+    def calculate_metric_for_all_tracks_with_prefilter(self, panel_tqdm=None):
         # red_track_ids = self.tm_green.tracks.TrackID.unique().tolist()
         # green_track_ids = self.tm_green.tracks.TrackID.unique().tolist()
-        combinations = self.get_likely_combinations(shape=self.shape, n_bins=5)
+        combinations = self.get_likely_combinations(shape=self.shape, n_bins=10)
         print(f"{len(combinations)}")
 
+        iterator = panel_tqdm(combinations, desc="Calculating similarity metric") if panel_tqdm else \
+                   tqdm.tqdm(combinations, desc="Calculating similarity metric")
+
         metrics = [
-            self.calculate_metric(g, r) for r, g in tqdm.tqdm(combinations, desc="Calculating similarity metric")
+            self.calculate_metric(g, r) for r, g in iterator
         ]
         df = pd.DataFrame(columns=["red_track", "green_track"], data=combinations)
         df["metric"] = metrics
@@ -660,8 +663,8 @@ def slice_spots_into_grid(spots_df, n_bins, shape):
 
 
 class CartesianSimilarityFromFile(CartesianSimilarity):
-    def __init__(self, tm_red: TrackmateXML, tm_green: TrackmateXML, metric: pd.DataFrame):
-        super().__init__(tm_red, tm_green)
+    def __init__(self, tm_red: TrackmateXML, tm_green: TrackmateXML, metric: pd.DataFrame, shape: None):
+        super().__init__(tm_red, tm_green, shape)
         self.metric_df = metric.sort_values("metric").reset_index(drop=True)
 
     @cache

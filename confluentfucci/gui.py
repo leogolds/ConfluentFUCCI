@@ -8,6 +8,7 @@ from tkinter import (
 )
 
 import cellpose.core
+import h5py
 import holoviews as hv
 import hvplot.pandas
 import napari
@@ -47,8 +48,12 @@ class CollectiveStats:
         self.metric = metric
         self.instance = None
 
-        self.flow_frame = pn.widgets.IntSlider(name="Frame", value=1, start=1, end=self.stack.shape[0] - 1)
-        self.flow_min_magnitude = pn.widgets.IntSlider(name="Min Magnitude", value=1, start=0, end=25)
+        self.flow_frame = pn.widgets.IntSlider(
+            name="Frame", value=1, start=1, end=self.stack.shape[0] - 1
+        )
+        self.flow_min_magnitude = pn.widgets.IntSlider(
+            name="Min Magnitude", value=1, start=0, end=25
+        )
 
         flow_field_df = self.metric.calculate_flow_field(shape=self.stack.shape[1:])
         flow_field_df["magnitude_um"] = flow_field_df.magnitude * 0.67
@@ -67,7 +72,9 @@ class CollectiveStats:
         )
 
         self.sidebar = self.get_sidebar()
-        self.main = pn.GridSpec(mode="override", sizing_mode="stretch_width", height=600)
+        self.main = pn.GridSpec(
+            mode="override", sizing_mode="stretch_width", height=600
+        )
 
         self.template = self.get_template()
 
@@ -119,7 +126,9 @@ class CollectiveStats:
         df = df.groupby("frame")[["red", "yellow", "green"]].sum()
         df["red_norm"] = df.red / df[["green", "red", "yellow"]].sum(axis="columns")
         df["green_norm"] = df.green / df[["green", "red", "yellow"]].sum(axis="columns")
-        df["yellow_norm"] = df.yellow / df[["green", "red", "yellow"]].sum(axis="columns")
+        df["yellow_norm"] = df.yellow / df[["green", "red", "yellow"]].sum(
+            axis="columns"
+        )
 
         df["time_hours"] = df.index / 6
 
@@ -149,12 +158,12 @@ class CollectiveStats:
             # df.groupby("timestep").progress_apply(compute_voronoi).query("valid_region")
             df.groupby("frame")
             .apply(compute_voronoi)
-            .query("valid_region")
+            .query("valid_region").reset_index(drop=True)
         )
 
         # vor_stats_df = valid_regions_df.groupby(["frame", "bin"]).apply(compute_voronoi_stats)
         vor_stats_df = valid_regions_df.groupby(["frame"]).apply(compute_voronoi_stats)
-        filtered_vor_stats_df = filter_voronoi_tiling(vor_stats_df, self.image_rect)
+        filtered_vor_stats_df = filter_voronoi_tiling(vor_stats_df, self.image_rect).reset_index(drop=True)
         df = (
             filtered_vor_stats_df.groupby(["frame", "color"])["area"]
             .agg(["mean", "sem", "count"])
@@ -222,7 +231,7 @@ def select_files_model():
     return Path(files)
 
 
-def view_segmented(data_dir_path):
+def view_segmented_napari(data_dir_path):
     base_data_path = Path(data_dir_path)
     viewer = napari.Viewer(title="PyFucciTrack Viewer")
 
@@ -292,24 +301,42 @@ class AppUI(param.Parameterized):
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.validate_btn = pn.widgets.Button(name="Validate Install", button_type="danger")
+        self.validate_btn = pn.widgets.Button(
+            name="Validate Install", button_type="danger"
+        )
         self.validate_btn.on_click(self.validate_install)
         pn.state.onload(self.validate_install)
 
-        self.select_data_path_btn = pn.widgets.Button(name="Select Data Path", button_type="primary")
+        self.select_data_path_btn = pn.widgets.Button(
+            name="Select Data Path", button_type="primary"
+        )
         self.select_data_path_btn.on_click(self.select_data_folder)
-        self.select_red_cellpose_model_btn = pn.widgets.Button(name="Select Red CellPose Model", button_type="primary")
+        self.select_red_cellpose_model_btn = pn.widgets.Button(
+            name="Select Red CellPose Model", button_type="primary"
+        )
         self.select_red_cellpose_model_btn.on_click(self.select_red_model)
         self.select_green_cellpose_model_btn = pn.widgets.Button(
             name="Select Green CellPose Model", button_type="primary"
         )
         self.select_green_cellpose_model_btn.on_click(self.select_green_model)
 
-        self.segment_one_btn = pn.widgets.Button(name="Segment one frame", button_type="primary")
+        self.segment_one_btn = pn.widgets.Button(
+            name="Segment one frame", button_type="primary"
+        )
         self.segment_one_btn.on_click(self.segment_one)
-        self.segment_all_btn = pn.widgets.Button(name="Segment stack", button_type="primary")
+
+        self.segment_all_btn = pn.widgets.Button(
+            name="Segment stack", button_type="primary"
+        )
         self.segment_all_btn.on_click(self.segment_stack)
-        self.segmentation_progress = pn.widgets.Tqdm(width=300)
+        self.segmentation_progress_red = pn.widgets.Tqdm(sizing_mode='stretch_width', text='Red')
+        self.segmentation_progress_green = pn.widgets.Tqdm(sizing_mode='stretch_width', text='Green')
+
+        self.view_segmented_btn = pn.widgets.Button(
+            name="View Segmentation", button_type="success", disabled=True
+        )
+        self.view_segmented_btn.on_click(self.view_segmented)
+
 
         self.run_tracking_btn = pn.widgets.Button(name="Track", button_type="primary")
         self.run_tracking_btn.on_click(self.track)
@@ -317,8 +344,8 @@ class AppUI(param.Parameterized):
 
         self.run_analysis_btn = pn.widgets.Button(name="Analyze", button_type="primary")
         self.run_analysis_btn.on_click(self.run_analysis)
-        self.analysis_progress = pn.widgets.Tqdm(width=300)
-        self.analysis_progress.pandas(desc="anslysis progress")
+        self.analysis_progress = pn.widgets.Tqdm(sizing_mode='stretch_width')
+        self.analysis_progress.pandas(desc="anslysis progress", leave=True)
         self.analysis_ui = None
 
         self.anslysis_tabs = pn.Tabs(
@@ -328,7 +355,9 @@ class AppUI(param.Parameterized):
         )
 
         self.sidebar = self.get_sidebar()
-        self.main = pn.GridSpec(mode="override", sizing_mode="stretch_width", height=600)
+        self.main = pn.GridSpec(
+            mode="override", sizing_mode="stretch_width", height=600
+        )
 
         self.template = self.get_template()
 
@@ -356,7 +385,10 @@ class AppUI(param.Parameterized):
         root = Tk()
         root.withdraw()
         root.call("wm", "attributes", ".", "-topmost", True)
-        short_data, long_data = data.fetch_short_example_data(), data.fetch_long_example_data()
+        short_data, long_data = (
+            data.fetch_short_example_data(),
+            data.fetch_long_example_data(),
+        )
         files = filedialog.askdirectory(initialdir=short_data[0].parent.parent)
         # files = filedialog.askdirectory(
         #     initialdir=r"D:\Data\full_pipeline_tests\left_60_frames"
@@ -408,34 +440,46 @@ class AppUI(param.Parameterized):
     def segment_one(self):
         pass
 
+    def view_segmented(self, event):
+        self.main[:, :] = "# Segmentation\nWe're opening a viewer (possibly behind the browser window)\nPlease close viewer to continue"
+        self.view_segmented_btn.disabled = True
+        view_segmented_napari(self.data_dir_path)
+        self.main[:, :] = "# Segmentation\nMove on to tracking"
+        self.view_segmented_btn.disabled = False
+
     def segment_stack(self, event):
         segment_stack(
             path=Path(self.red_path),
             model=Path(self.red_model_path),
-            panel_tqdm_instance=self.segmentation_progress,
+            panel_red_tqdm_instance=self.segmentation_progress_red,
         )
         segment_stack(
             path=Path(self.green_path),
             model=Path(self.green_model_path),
-            panel_tqdm_instance=self.segmentation_progress,
+            panel_green_tqdm_instance=self.segmentation_progress_green,
         )
 
-        self.main[:, :] = "# Segmentation\nPlease close viewer to continue"
+        self.view_segmented_btn.clicks+=1
 
-        view_segmented(self.data_dir_path)
 
     @param.depends("analysis_available")
     def get_counts(self):
         if self.analysis_available:
             gspec = pn.GridSpec(sizing_mode="stretch_width", height=600)
-            gspec[:, :3], gspec[:, 3:6] = self.analysis_ui.get_count() if self.analysis_ui else (None, None)
+            gspec[:, :3], gspec[:, 3:6] = (
+                self.analysis_ui.get_count() if self.analysis_ui else (None, None)
+            )
             return gspec
         else:
             return None
 
     @param.depends("analysis_available")
     def get_area(self):
-        return pn.bind(self.analysis_ui.get_area_estimate) if self.analysis_available else None
+        return (
+            pn.bind(self.analysis_ui.get_area_estimate)
+            if self.analysis_available
+            else None
+        )
 
     @param.depends("analysis_available")
     def get_flow(self):
@@ -446,17 +490,21 @@ class AppUI(param.Parameterized):
         self.analysis_available = False
         tm_red = TrackmateXML(Path(self.data_dir_path) / "red_segmented.tiff.xml")
         tm_green = TrackmateXML(Path(self.data_dir_path) / "green_segmented.tiff.xml")
+        shape = h5py.File(Path(self.data_dir_path) / "red_segmented.h5").get('data').shape[1:]
 
         metric_path = Path(self.data_dir_path) / "metric.h5"
         if metric_path.exists():
             metric_df = pd.read_hdf(metric_path, key="metric")
-            self.metric = CartesianSimilarityFromFile(tm_red, tm_green, metric_df)
+            self.metric = CartesianSimilarityFromFile(tm_red, tm_green, metric_df, shape=shape)
         else:
-            self.metric = CartesianSimilarity(tm_red, tm_green)
-            metric_df = self.metric.calculate_metric_for_all_tracks()
+            self.metric = CartesianSimilarity(tm_red, tm_green, shape=shape)
+            # metric_df = self.metric.calculate_metric_for_all_tracks()
+            metric_df = self.metric.calculate_metric_for_all_tracks_with_prefilter(panel_tqdm=self.analysis_progress)
             metric_df.to_hdf(metric_path, key="metric")
 
-        self.analysis_ui = CollectiveStats(self.metric, Path(self.data_dir_path) / "phase.tif")
+        self.analysis_ui = CollectiveStats(
+            self.metric, Path(self.data_dir_path) / "phase.tif"
+        )
 
         self.analysis_available = True
         self.run_analysis_btn.disabled = False
@@ -486,7 +534,9 @@ class AppUI(param.Parameterized):
                 pn.Column(
                     self.segment_one_btn,
                     self.segment_all_btn,
-                    self.segmentation_progress,
+                    self.segmentation_progress_red,
+                    self.segmentation_progress_green,
+                    self.view_segmented_btn,
                 ),
             )
         )
@@ -581,8 +631,13 @@ def visualize_flow_field(flow_field_df, red_stack, frame=30, min_magnitude=0):
     ).opts(color="red")
     histograms = (
         (
-            frame_df.magnitude.hvplot.hist(title="Velocity", xlabel="velocity (um/frame)", xlim=(0, 20)) * v_line
-            + df.angle.hvplot.hist(title="Direction", xlabel="angle (rad)", xlim=(-np.pi, np.pi))
+            frame_df.magnitude.hvplot.hist(
+                title="Velocity", xlabel="velocity (um/frame)", xlim=(0, 20)
+            )
+            * v_line
+            + df.angle.hvplot.hist(
+                title="Direction", xlabel="angle (rad)", xlim=(-np.pi, np.pi)
+            )
         )
         .cols(1)
         .opts(shared_axes=False)
