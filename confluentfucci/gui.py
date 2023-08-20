@@ -337,6 +337,10 @@ class AppUI(param.Parameterized):
         )
         self.view_segmented_btn.on_click(self.view_segmented)
 
+        self.save_tables_btn = pn.widgets.Button(
+            name="Save", button_type="primary"
+        )
+        self.save_tables_btn.on_click(self.save_tables)
 
         self.run_tracking_btn = pn.widgets.Button(name="Track", button_type="primary")
         self.run_tracking_btn.on_click(self.track)
@@ -380,6 +384,9 @@ class AppUI(param.Parameterized):
         else:
             self.validate_btn.button_type = "danger"
         self.validate_btn.disabled = False
+
+    def save_tables(self, event=None):
+        self.analysis_ui.metric.get_all_spots().to_csv(Path(self.data_dir_path) / 'confluent_fucci_data.csv')
 
     def select_data_folder(self, *b):
         root = Tk()
@@ -554,6 +561,14 @@ class AppUI(param.Parameterized):
                 pn.Column(
                     self.run_analysis_btn,
                     self.analysis_progress,
+                ),
+            )
+        )
+        sidebar.append(
+            (
+                "Save Results",
+                pn.Column(
+                    self.save_tables_btn,
                 ),
             )
         )
