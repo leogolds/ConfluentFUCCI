@@ -516,6 +516,7 @@ class CartesianSimilarity:
                 "POSITION_X": float,
             }
         )
+        red_tracks['red'] = 'red'
 
         green_tracks = self.tm_green.spots_tracks[
             ~self.tm_green.spots_tracks.SPOT_ID.isin(green_spots_in_merged_tracks)
@@ -529,10 +530,11 @@ class CartesianSimilarity:
                 "POSITION_X": float,
             }
         )
+        green_tracks['color'] = 'green'
 
         yellow_tracks = self.get_merged_tracks()
         yellow_tracks = yellow_tracks[
-            ["frame", "POSITION_X", "POSITION_Y", "merged_track_id"]
+            ["frame", "POSITION_X", "POSITION_Y", "merged_track_id", 'color']
         ]
         yellow_tracks["TrackID"], _ = pd.factorize(yellow_tracks.merged_track_id)
         yellow_tracks = yellow_tracks.sort_values(["TrackID", "frame"]).astype(

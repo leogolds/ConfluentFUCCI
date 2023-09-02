@@ -15,8 +15,8 @@ from confluentfucci.math import (
 )
 
 
-data_dir_path = r"C:\Users\leo\AppData\Local\confluentfucci\confluentfucci\Cache\v0.0.19\data\60_frames"
-# data_dir_path = r"E:\trying cFUCCI\7.7.22 - ser5\quarter image"
+# data_dir_path = r"C:\Users\leo\AppData\Local\confluentfucci\confluentfucci\Cache\v0.0.19\data\60_frames"
+data_dir_path = r"E:\trying cFUCCI\7.7.22 - ser5\quarter image"
 # data_dir_path = r"E:\trying cFUCCI\7.7.22 - ser5"
 
 tm_red = TrackmateXML(Path(data_dir_path) / "red_segmented.tiff.xml")
@@ -34,7 +34,7 @@ else:
 red_df, green_df, yellow_df = metric.get_tracks_for_visualization()
 red_df["constant"] = 1
 green_df["constant"] = 128
-yellow_df["constant"] = 254
+yellow_df["constant"] = yellow_df.color.map({"red": 0, "green": 1, "yellow": 0.5})
 
 red_tracks = list(
     red_df[["TrackID", "frame", "POSITION_Y", "POSITION_X"]].itertuples(
@@ -73,36 +73,44 @@ viewer.add_image(
 
 red_cmap = vispy.color.Colormap([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
 green_cmap = vispy.color.Colormap([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-yellow_cmap = vispy.color.Colormap([[0.0, 0.0, 0.0], [1.0, 1.0, 0.0]])
+# yellow_cmap = vispy.color.Colormap([[0.0, 0.0, 0.0], [1.0, 1.0, 0.0]])
+yellow_cmap = vispy.color.Colormap(
+    [[1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]],
+    interpolation="zero",
+)
 
 viewer.add_tracks(
     red_tracks,
     name="Red Tracks",
     features=red_df,
     color_by="constant",
-    blending='translucent',
+    blending="translucent",
     # colormap="hsv",
-    colormaps_dict={'constant': red_cmap},
+    colormaps_dict={"constant": red_cmap},
 )
 viewer.add_tracks(
     green_tracks,
     name="Green Tracks",
     features=green_df,
     color_by="constant",
-    blending='translucent',
+    blending="translucent",
     # colormap="hsv",
-    colormaps_dict={'constant': green_cmap},
-
+    colormaps_dict={"constant": green_cmap},
 )
 viewer.add_tracks(
     yellow_tracks,
     name="Yellow Tracks",
     features=yellow_df,
     color_by="constant",
-    blending='translucent',
+    # color_by="color",
+    blending="translucent",
     # colormap="hsv",
-    colormaps_dict={'constant': yellow_cmap},
-
+    # colormaps_dict={
+    #     "constant": yellow_df.color.map(
+    #         {"red": red_cmap, "green": green_cmap, "yellow": yellow_cmap}
+    #     ).values
+    # },
+    colormaps_dict={"constant": yellow_cmap},
 )
 
 napari.run()
