@@ -90,8 +90,12 @@ class TrackmateXML:
             self.tracks = self.__loadtracks(root)
             self.spots = self.__loadspots(root)
             self.filteredtracks = self.__loadfilteredtracks(root)
+
         else:
             raise ValueError("{0} is not avalid file suffix".format(self.pth.suffix))
+
+        self.spots_tracks = attach_track_ids(self.spots, self.tracks)
+        print("z")
 
     def save(self, filename, create_new=True):
         """
@@ -170,11 +174,18 @@ class TrackmateXML:
                 spot_values = spot.attrib
                 spot_values.pop("name")  # not needed
                 spot_values["frame"] = int(curr_frame)
-                spot_values["ID"] = int(spot_values.pop("ID"))  # we want ID to be integer, so we can index later
+                spot_values["ID"] = int(
+                    spot_values.pop("ID")
+                )  # we want ID to be integer, so we can index later
                 spot_values["POSITION_X"] = float(spot_values.pop("POSITION_X"))
                 spot_values["POSITION_Y"] = float(spot_values.pop("POSITION_Y"))
-                spot_values["image_id"] = int(float(spot_values.get("MAX_INTENSITY_CH1")))
-                spot_values["ROI"] = [(float(x), float(y)) for x, y in pairwise_iterator(spot.text.split(" "))]
+                spot_values["image_id"] = int(
+                    float(spot_values.get("MAX_INTENSITY_CH1"))
+                )
+                spot_values["ROI"] = [
+                    (float(x), float(y))
+                    for x, y in pairwise_iterator(spot.text.split(" "))
+                ]
                 all_spots.append(spot_values)
             all_frames.append(pd.DataFrame(all_spots))
 
@@ -201,8 +212,12 @@ class TrackmateXML:
         if current_track.empty:
             raise ValueError("track {0} not found".format(track_id))
         track_splits = []
-        source_spots = self.spots.loc[current_track["SPOT_SOURCE_ID"].values].reset_index()
-        target_spots = self.spots.loc[current_track["SPOT_TARGET_ID"].values].reset_index()
+        source_spots = self.spots.loc[
+            current_track["SPOT_SOURCE_ID"].values
+        ].reset_index()
+        target_spots = self.spots.loc[
+            current_track["SPOT_TARGET_ID"].values
+        ].reset_index()
         currentindex = source_spots["frame"].idxmin()
         whole_track = [source_spots.loc[currentindex], target_spots.loc[currentindex]]
         # can we continue from the target to a new source?
@@ -213,7 +228,11 @@ class TrackmateXML:
                 currentindex = currentindex[0]
                 fr = target_spots["frame"].loc[currentindex]
                 if verbose:
-                    print("Got a split at frame {0} Will continue on branch 0".format(int(fr)))
+                    print(
+                        "Got a split at frame {0} Will continue on branch 0".format(
+                            int(fr)
+                        )
+                    )
                     # but so far we do nothing with this knowledge
                 track_splits.append(fr)
             else:
@@ -234,7 +253,9 @@ class TrackmateXML:
 
 
 def filter_voronoi_tiling(df, rect, quantile=0.99):
-    in_bounds_tiles_df = df.loc[df.apply(lambda row: rect.contains(Polygon(row.vertices)), axis="columns")]
+    in_bounds_tiles_df = df.loc[
+        df.apply(lambda row: rect.contains(Polygon(row.vertices)), axis="columns")
+    ]
     return in_bounds_tiles_df.query("area < area.quantile(@quantile)")
 
 
@@ -247,7 +268,8 @@ def compute_voronoi(df):
     df["vertice_ids"] = [vor.regions[i] for i in vor.point_region]
     df["valid_region"] = [True if min(l) != -1 else False for l in df.vertice_ids]
     df["vertices"] = [
-        np.array([vor.vertices[vertice_id] for vertice_id in vertice_ids]) for vertice_ids in df.vertice_ids
+        np.array([vor.vertices[vertice_id] for vertice_id in vertice_ids])
+        for vertice_ids in df.vertice_ids
     ]
 
     # global global_df_list
@@ -257,8 +279,13 @@ def compute_voronoi(df):
 
 
 def compute_voronoi_stats(df):
-    df["area"] = [Polygon(vert).area * calibration_squared_microns_to_squared_pixel for vert in df.vertices]
-    df["perimeter"] = [Polygon(vert).length * pixel_size_in_microns for vert in df.vertices]
+    df["area"] = [
+        Polygon(vert).area * calibration_squared_microns_to_squared_pixel
+        for vert in df.vertices
+    ]
+    df["perimeter"] = [
+        Polygon(vert).length * pixel_size_in_microns for vert in df.vertices
+    ]
 
     # horizontal_bins = range(0, 4096, 40)
     # df["bins"] = pd.cut(
@@ -296,8 +323,16 @@ class CartesianSimilarity:
 
         sse = (
             (
-                (red_track_df.reset_index().POSITION_X - green_track_df.reset_index().POSITION_X) ** 2
-                + (red_track_df.reset_index().POSITION_Y - green_track_df.reset_index().POSITION_Y) ** 2
+                (
+                    red_track_df.reset_index().POSITION_X
+                    - green_track_df.reset_index().POSITION_X
+                )
+                ** 2
+                + (
+                    red_track_df.reset_index().POSITION_Y
+                    - green_track_df.reset_index().POSITION_Y
+                )
+                ** 2
             )
             ** 0.5
         ).sum()
@@ -320,7 +355,8 @@ class CartesianSimilarity:
         print(f"{len(combinations)}")
 
         metrics = [
-            self.calculate_metric(g, r) for r, g in tqdm.tqdm(combinations, desc="Calculating similarity metric")
+            self.calculate_metric(g, r)
+            for r, g in tqdm.tqdm(combinations, desc="Calculating similarity metric")
         ]
         df = pd.DataFrame(columns=["red_track", "green_track"], data=combinations)
         df["metric"] = metrics
@@ -334,12 +370,13 @@ class CartesianSimilarity:
         combinations = self.get_likely_combinations(shape=self.shape, n_bins=10)
         print(f"{len(combinations)}")
 
-        iterator = panel_tqdm(combinations, desc="Calculating similarity metric") if panel_tqdm else \
-                   tqdm.tqdm(combinations, desc="Calculating similarity metric")
+        iterator = (
+            panel_tqdm(combinations, desc="Calculating similarity metric")
+            if panel_tqdm
+            else tqdm.tqdm(combinations, desc="Calculating similarity metric")
+        )
 
-        metrics = [
-            self.calculate_metric(g, r) for r, g in iterator
-        ]
+        metrics = [self.calculate_metric(g, r) for r, g in iterator]
         df = pd.DataFrame(columns=["red_track", "green_track"], data=combinations)
         df["metric"] = metrics
 
@@ -354,8 +391,12 @@ class CartesianSimilarity:
         overlap_frame_min = max(red_track_df.frame.min(), green_track_df.frame.min())
         overlap_frame_max = min(red_track_df.frame.max(), green_track_df.frame.max())
 
-        overlap_red_frames = red_track_df.query("@overlap_frame_min <= frame <= @overlap_frame_max+1")
-        overlap_green_frames = green_track_df.query("@overlap_frame_min <= frame <= @overlap_frame_max+1")
+        overlap_red_frames = red_track_df.query(
+            "@overlap_frame_min <= frame <= @overlap_frame_max+1"
+        )
+        overlap_green_frames = green_track_df.query(
+            "@overlap_frame_min <= frame <= @overlap_frame_max+1"
+        )
         # df = red_track_df.merge(
         #     green_track_df,
         #     on="frame",
@@ -373,11 +414,17 @@ class CartesianSimilarity:
             row["source_track"] = "red" if g.empty else "green"
             if not r.empty and not g.empty:
                 row = (r if r.AREA.values > g.AREA.values else g).copy()
-                row["source_track"] = "red" if r.AREA.values > g.AREA.values else "green"
+                row["source_track"] = (
+                    "red" if r.AREA.values > g.AREA.values else "green"
+                )
                 row["POSITION_Y"] = np.mean([r.POSITION_X, g.POSITION_X])
                 row["POSITION_Y"] = np.mean([r.POSITION_Y, g.POSITION_Y])
             rows.append(row)
-        yellow_frames = pd.concat(rows) if rows else pd.DataFrame(columns=["source_track", *red_track_df.columns])
+        yellow_frames = (
+            pd.concat(rows)
+            if rows
+            else pd.DataFrame(columns=["source_track", *red_track_df.columns])
+        )
 
         # yellow_frames = (
         #     pd.concat([overlap_red_frames, overlap_green_frames])
@@ -386,8 +433,12 @@ class CartesianSimilarity:
         #     .astype({"frame": "int"})
         # )
 
-        red_frames = red_track_df.query("frame < @overlap_frame_min or frame > @overlap_frame_max").copy()
-        green_frames = green_track_df.query("frame < @overlap_frame_min or frame > @overlap_frame_max").copy()
+        red_frames = red_track_df.query(
+            "frame < @overlap_frame_min or frame > @overlap_frame_max"
+        ).copy()
+        green_frames = green_track_df.query(
+            "frame < @overlap_frame_min or frame > @overlap_frame_max"
+        ).copy()
 
         yellow_frames["color"] = "yellow"
         red_frames["color"] = "red"
@@ -395,7 +446,11 @@ class CartesianSimilarity:
         green_frames["color"] = "green"
         green_frames["source_track"] = "green"
 
-        df = pd.concat([red_frames, green_frames, yellow_frames]).reset_index(drop=True).sort_values("frame")
+        df = (
+            pd.concat([red_frames, green_frames, yellow_frames])
+            .reset_index(drop=True)
+            .sort_values("frame")
+        )
         df["merged_track_id"] = f"r{int(red_track_id)}_g{int(green_track_id)}"
         return df
 
@@ -406,7 +461,9 @@ class CartesianSimilarity:
         print("Merging tracks")
         track_df_list = (
             self.metric_df.query("metric < @max_metric_value")
-            .progress_apply(lambda x: self.merge_tracks(x.red_track, x.green_track), axis="columns")
+            .progress_apply(
+                lambda x: self.merge_tracks(x.red_track, x.green_track), axis="columns"
+            )
             .to_list()
         )
         return pd.concat(track_df_list).reset_index(drop=True)
@@ -416,7 +473,9 @@ class CartesianSimilarity:
 
         # red_count = distinctly_red_spots.groupby(["frame", "bin"]).size()
         # green_count = distinctly_green_spots.groupby(["frame", "bin"]).size()
-        merged_tracks_count = all_cells_df.groupby(["frame", "color", "bin"]).size().unstack("color")
+        merged_tracks_count = (
+            all_cells_df.groupby(["frame", "color", "bin"]).size().unstack("color")
+        )
 
         df = merged_tracks_count.copy().fillna(0).reset_index()
         # df["green"] = df["green"] + green_count
@@ -431,9 +490,61 @@ class CartesianSimilarity:
         # green_spots_in_merged_tracks = all_merged_tracks.query(
         #     'source_track == "green"'
         # ).ID
-        all_spots["bin"] = pd.cut(all_spots.POSITION_X, len(bin_labels), labels=bin_labels)
+        all_spots["bin"] = pd.cut(
+            all_spots.POSITION_X, len(bin_labels), labels=bin_labels
+        )
 
         return all_spots
+
+    def get_tracks_for_visualization(self):
+        (
+            green_spots_in_merged_tracks,
+            red_spots_in_merged_tracks,
+        ) = self.get_merged_red_green_spot_ids()
+
+        relevant_columns = ["frame", "POSITION_X", "POSITION_Y", "TrackID", "SPOT_ID"]
+
+        red_tracks = self.tm_red.spots_tracks[
+            ~self.tm_red.spots_tracks.SPOT_ID.isin(red_spots_in_merged_tracks)
+        ]
+        red_tracks = red_tracks[relevant_columns].drop_duplicates()
+        red_tracks = red_tracks.sort_values(["TrackID", "frame"]).astype(
+            {
+                "TrackID": int,
+                "frame": int,
+                "POSITION_Y": float,
+                "POSITION_X": float,
+            }
+        )
+
+        green_tracks = self.tm_green.spots_tracks[
+            ~self.tm_green.spots_tracks.SPOT_ID.isin(green_spots_in_merged_tracks)
+        ]
+        green_tracks = green_tracks[relevant_columns].drop_duplicates()
+        green_tracks = green_tracks.sort_values(["TrackID", "frame"]).astype(
+            {
+                "TrackID": int,
+                "frame": int,
+                "POSITION_Y": float,
+                "POSITION_X": float,
+            }
+        )
+
+        yellow_tracks = self.get_merged_tracks()
+        yellow_tracks = yellow_tracks[
+            ["frame", "POSITION_X", "POSITION_Y", "merged_track_id"]
+        ]
+        yellow_tracks["TrackID"], _ = pd.factorize(yellow_tracks.merged_track_id)
+        yellow_tracks = yellow_tracks.sort_values(["TrackID", "frame"]).astype(
+            {
+                "TrackID": int,
+                "frame": int,
+                "POSITION_Y": float,
+                "POSITION_X": float,
+            }
+        )
+
+        return red_tracks, green_tracks, yellow_tracks
 
     def get_all_spots(self):
         (
@@ -441,8 +552,12 @@ class CartesianSimilarity:
             red_spots_in_merged_tracks,
         ) = self.get_merged_red_green_spot_ids()
 
-        distinctly_red_spots = self.tm_red.spots.drop(red_spots_in_merged_tracks).reset_index()
-        distinctly_green_spots = self.tm_green.spots.drop(green_spots_in_merged_tracks).reset_index()
+        distinctly_red_spots = self.tm_red.spots.drop(
+            red_spots_in_merged_tracks
+        ).reset_index()
+        distinctly_green_spots = self.tm_green.spots.drop(
+            green_spots_in_merged_tracks
+        ).reset_index()
 
         distinctly_red_spots[["color", "source_track"]] = "red"
         distinctly_red_spots["source_track"] = "red"
@@ -460,7 +575,9 @@ class CartesianSimilarity:
         merged = self.get_merged_tracks()
         # merged["track_uid"] = merged.merged_track_id
         #
-        df = pd.concat([merged, distinctly_red_spots, distinctly_green_spots]).reset_index(drop=True)
+        df = pd.concat(
+            [merged, distinctly_red_spots, distinctly_green_spots]
+        ).reset_index(drop=True)
 
         return df
 
@@ -469,10 +586,14 @@ class CartesianSimilarity:
 
         # extract spots accounted for red/green spot ids
         red_spots_in_merged_tracks = pd.concat(
-            accounted_red_green_track_ids.red_track_id.apply(self.tm_red.trace_track).values
+            accounted_red_green_track_ids.red_track_id.apply(
+                self.tm_red.trace_track
+            ).values
         ).ID
         green_spots_in_merged_tracks = pd.concat(
-            accounted_red_green_track_ids.green_track_id.apply(self.tm_green.trace_track).values
+            accounted_red_green_track_ids.green_track_id.apply(
+                self.tm_green.trace_track
+            ).values
         ).ID
 
         return green_spots_in_merged_tracks, red_spots_in_merged_tracks
@@ -485,8 +606,12 @@ class CartesianSimilarity:
             r"r(?P<red_track_id>\d*)_g(?P<green_track_id>\d*)"
         )
 
-        accounted_red_green_track_ids["red_track_id"] = pd.to_numeric(accounted_red_green_track_ids.red_track_id)
-        accounted_red_green_track_ids["green_track_id"] = pd.to_numeric(accounted_red_green_track_ids.green_track_id)
+        accounted_red_green_track_ids["red_track_id"] = pd.to_numeric(
+            accounted_red_green_track_ids.red_track_id
+        )
+        accounted_red_green_track_ids["green_track_id"] = pd.to_numeric(
+            accounted_red_green_track_ids.green_track_id
+        )
 
         return accounted_red_green_track_ids.drop_duplicates()
 
@@ -511,11 +636,15 @@ class CartesianSimilarity:
         result_df = pd.concat([red_unmerged, green_unmerged], ignore_index=True)
         x_interval_range = pd.interval_range(start=0, end=shape[1], freq=bin_size)
         result_df["x_grid_interval"] = pd.cut(result_df.POSITION_X, x_interval_range)
-        result_df["x_bin"] = result_df.x_grid_interval.cat.rename_categories([int(i.mid) for i in x_interval_range])
+        result_df["x_bin"] = result_df.x_grid_interval.cat.rename_categories(
+            [int(i.mid) for i in x_interval_range]
+        )
 
         y_interval_range = pd.interval_range(start=0, end=shape[0], freq=bin_size)
         result_df["y_grid_interval"] = pd.cut(result_df.POSITION_Y, y_interval_range)
-        result_df["y_bin"] = result_df.y_grid_interval.cat.rename_categories([int(i.mid) for i in y_interval_range])
+        result_df["y_bin"] = result_df.y_grid_interval.cat.rename_categories(
+            [int(i.mid) for i in y_interval_range]
+        )
         #
         result_df["y_bin"] = result_df["y_bin"].astype(np.float32)
         result_df["x_bin"] = result_df["x_bin"].astype(np.float32)
@@ -527,11 +656,15 @@ class CartesianSimilarity:
         result_df = self.get_merged_tracks()
         x_interval_range = pd.interval_range(start=0, end=shape[1], freq=bin_size)
         result_df["x_grid_interval"] = pd.cut(result_df.POSITION_X, x_interval_range)
-        result_df["x_bin"] = result_df.x_grid_interval.cat.rename_categories([int(i.mid) for i in x_interval_range])
+        result_df["x_bin"] = result_df.x_grid_interval.cat.rename_categories(
+            [int(i.mid) for i in x_interval_range]
+        )
 
         y_interval_range = pd.interval_range(start=0, end=shape[0], freq=bin_size)
         result_df["y_grid_interval"] = pd.cut(result_df.POSITION_Y, y_interval_range)
-        result_df["y_bin"] = result_df.y_grid_interval.cat.rename_categories([int(i.mid) for i in y_interval_range])
+        result_df["y_bin"] = result_df.y_grid_interval.cat.rename_categories(
+            [int(i.mid) for i in y_interval_range]
+        )
         #
         result_df["y_bin"] = result_df["y_bin"].astype(np.float32)
         result_df["x_bin"] = result_df["x_bin"].astype(np.float32)
@@ -547,9 +680,13 @@ class CartesianSimilarity:
         merged_df[["d_frame", "d_x", "d_y", "magnitude", "angle"]] = merged_df.groupby(
             "merged_track_id", group_keys=False
         ).progress_apply(calculate_positional_derivative)
-        unmerged_df[["d_frame", "d_x", "d_y", "magnitude", "angle"]] = unmerged_df.groupby(
+        unmerged_df[
+            ["d_frame", "d_x", "d_y", "magnitude", "angle"]
+        ] = unmerged_df.groupby(
             ["source_track", "track_id"], group_keys=False
-        ).progress_apply(calculate_positional_derivative)
+        ).progress_apply(
+            calculate_positional_derivative
+        )
 
         c = (
             pd.concat([merged_df, unmerged_df], ignore_index=True)
@@ -567,18 +704,28 @@ class CartesianSimilarity:
         slice_spots_into_grid(self.tm_red.spots, n_bins, shape)
         slice_spots_into_grid(self.tm_green.spots, n_bins, shape)
 
-        red = attach_track_ids(self.tm_red.spots, self.tm_red.tracks)
-        green = attach_track_ids(self.tm_green.spots, self.tm_green.tracks)
+        # red = attach_track_ids(self.tm_red.spots, self.tm_red.tracks)
+        # green = attach_track_ids(self.tm_green.spots, self.tm_green.tracks)
+        red = self.tm_red.spots_tracks
+        green = self.tm_green.spots_tracks
 
         # Find unique tracks in each grid square for red/green tracks
         gridded_red_tracks = (
-            red.groupby(["x_bin", "y_bin"]).TrackID.unique().to_frame().rename({"TrackID": "red_track_id"}, axis=1)
+            red.groupby(["x_bin", "y_bin"])
+            .TrackID.unique()
+            .to_frame()
+            .rename({"TrackID": "red_track_id"}, axis=1)
         )
         gridded_green_tracks = (
-            green.groupby(["x_bin", "y_bin"]).TrackID.unique().to_frame().rename({"TrackID": "green_track_id"}, axis=1)
+            green.groupby(["x_bin", "y_bin"])
+            .TrackID.unique()
+            .to_frame()
+            .rename({"TrackID": "green_track_id"}, axis=1)
         )
         # inner join based on grid square
-        matched_tracks_df = gridded_red_tracks.merge(gridded_green_tracks, left_index=True, right_index=True).dropna()
+        matched_tracks_df = gridded_red_tracks.merge(
+            gridded_green_tracks, left_index=True, right_index=True
+        ).dropna()
 
         # Find unique tracks in each shifted grid square for red/green tracks
         gridded_red_tracks_shifted = (
@@ -602,12 +749,18 @@ class CartesianSimilarity:
         # Find set of red/green track combinations
         matched_tracks_set = set(
             itertools.chain.from_iterable(
-                [itertools.product(*matched_tracks_df.values[i]) for i in range(len(matched_tracks_df))]
+                [
+                    itertools.product(*matched_tracks_df.values[i])
+                    for i in range(len(matched_tracks_df))
+                ]
             )
         )
         shifted_matched_tracks_set = set(
             itertools.chain.from_iterable(
-                [itertools.product(*shifted_matched_tracks_df.values[i]) for i in range(len(shifted_matched_tracks_df))]
+                [
+                    itertools.product(*shifted_matched_tracks_df.values[i])
+                    for i in range(len(shifted_matched_tracks_df))
+                ]
             )
         )
 
@@ -623,8 +776,12 @@ def attach_track_ids(spots_df, tracks_df):
     """
     flat_tracks = pd.concat(
         [
-            tracks_df[["TrackID", "SPOT_SOURCE_ID"]].rename(columns={"SPOT_SOURCE_ID": "SPOT_ID"}),
-            tracks_df[["TrackID", "SPOT_TARGET_ID"]].rename(columns={"SPOT_TARGET_ID": "SPOT_ID"}),
+            tracks_df[["TrackID", "SPOT_SOURCE_ID"]].rename(
+                columns={"SPOT_SOURCE_ID": "SPOT_ID"}
+            ),
+            tracks_df[["TrackID", "SPOT_TARGET_ID"]].rename(
+                columns={"SPOT_TARGET_ID": "SPOT_ID"}
+            ),
         ],
         ignore_index=True,
     )
@@ -641,21 +798,29 @@ def slice_spots_into_grid(spots_df, n_bins, shape):
     """
     x_interval_range = pd.interval_range(start=0, end=shape[1], freq=shape[1] / n_bins)
     spots_df["x_grid_interval"] = pd.cut(spots_df.POSITION_X, x_interval_range)
-    spots_df["x_bin"] = spots_df.x_grid_interval.cat.rename_categories([int(i.mid) for i in x_interval_range])
+    spots_df["x_bin"] = spots_df.x_grid_interval.cat.rename_categories(
+        [int(i.mid) for i in x_interval_range]
+    )
 
     y_interval_range = pd.interval_range(start=0, end=shape[1], freq=shape[0] / n_bins)
     spots_df["y_grid_interval"] = pd.cut(spots_df.POSITION_X, y_interval_range)
-    spots_df["y_bin"] = spots_df.y_grid_interval.cat.rename_categories([int(i.mid) for i in y_interval_range])
+    spots_df["y_bin"] = spots_df.y_grid_interval.cat.rename_categories(
+        [int(i.mid) for i in y_interval_range]
+    )
 
     shift_amount_x = shape[1] / n_bins / 2
-    x_interval_range = pd.interval_range(start=-shift_amount_x, end=shape[1] + shift_amount_x, freq=shape[1] / n_bins)
+    x_interval_range = pd.interval_range(
+        start=-shift_amount_x, end=shape[1] + shift_amount_x, freq=shape[1] / n_bins
+    )
     spots_df["x_grid_interval_shifted"] = pd.cut(spots_df.POSITION_X, x_interval_range)
     spots_df["x_bin_shifted"] = spots_df.x_grid_interval_shifted.cat.rename_categories(
         [int(i.mid) for i in x_interval_range]
     )
 
     shift_amount_y = shape[0] / n_bins / 2
-    y_interval_range = pd.interval_range(start=-shift_amount_y, end=shape[1] + shift_amount_y, freq=shape[0] / n_bins)
+    y_interval_range = pd.interval_range(
+        start=-shift_amount_y, end=shape[1] + shift_amount_y, freq=shape[0] / n_bins
+    )
     spots_df["y_grid_interval_shifted"] = pd.cut(spots_df.POSITION_X, y_interval_range)
     spots_df["y_bin_shifted"] = spots_df.y_grid_interval_shifted.cat.rename_categories(
         [int(i.mid) for i in y_interval_range]
@@ -663,13 +828,21 @@ def slice_spots_into_grid(spots_df, n_bins, shape):
 
 
 class CartesianSimilarityFromFile(CartesianSimilarity):
-    def __init__(self, tm_red: TrackmateXML, tm_green: TrackmateXML, metric: pd.DataFrame, shape: None):
+    def __init__(
+        self,
+        tm_red: TrackmateXML,
+        tm_green: TrackmateXML,
+        metric: pd.DataFrame,
+        shape: None,
+    ):
         super().__init__(tm_red, tm_green, shape)
         self.metric_df = metric.sort_values("metric").reset_index(drop=True)
 
     @cache
     def calculate_metric(self, green_track_id, red_track_id):
-        return self.metric_df.query("green_track == @green_track_id and red_track == @red_track_id").metric.item()
+        return self.metric_df.query(
+            "green_track == @green_track_id and red_track == @red_track_id"
+        ).metric.item()
 
 
 def calculate_positional_derivative(df):
