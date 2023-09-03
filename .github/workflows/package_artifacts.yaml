@@ -33,7 +33,7 @@ jobs:
           nuitka-version: main
           script-name: confluentfucci
           standalone: true
-          onefile: true
+#          onefile: true
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
