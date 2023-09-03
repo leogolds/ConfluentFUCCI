@@ -23,9 +23,9 @@ jobs:
           cache-dependency-path: |
             **/requirements.txt
 
-      - name: Install Dependencies
-        run: |
-          pip install confluentfucci
+#      - name: Install Dependencies
+#        run: |
+#          pip install confluentfucci
 
       - name: Build Executable
         uses: Nuitka/Nuitka-Action@main
@@ -33,6 +33,7 @@ jobs:
           nuitka-version: main
           script-name: confluentfucci
           standalone: true
+          module: true
 #          onefile: true
 
       - name: Upload Artifacts
