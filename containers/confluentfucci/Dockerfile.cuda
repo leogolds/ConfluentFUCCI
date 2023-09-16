@@ -1,0 +1,10 @@
+FROM pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
+
+ENV DOCKER=1
+
+RUN pip install confluentfucci
+
+#ADD entrypoint.sh .
+#ENTRYPOINT entrypoint.sh
+
+CMD bash
