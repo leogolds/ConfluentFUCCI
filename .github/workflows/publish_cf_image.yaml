@@ -10,9 +10,9 @@
 name: Publish Docker images
 
 on:
-  push:
-    branches:
-      - "feature/dockerize"
+#  push:
+#    branches:
+#      - "feature/dockerize"
 
   release:
     types: [published]
