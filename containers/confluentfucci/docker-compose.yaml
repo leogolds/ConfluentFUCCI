@@ -1,0 +1,33 @@
+#docker run -it --rm --gpus all -v /var/run/docker.sock:/var/run/docker.sock -p 8000:8000 cf-pytorch
+
+services:
+  confluentfucci:
+    image: "cf-local-pytorch"
+#    command: poetry run python -m confluentfucci.gui
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+      - "9876:9876"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "${DATA_PATH}:/data"
+      - "${MODEL_PATH}:/data/models"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+
+#  test:
+#    image: pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
+#    command: nvidia-smi
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [ gpu ]

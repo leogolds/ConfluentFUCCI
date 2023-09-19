@@ -1,11 +1,14 @@
+import os
+import subprocess
 import sys
 import traceback
 from pathlib import Path
 from time import sleep
-from tkinter import (
-    Tk,
-    filedialog,
-)
+
+# from tkinter import (
+#     Tk,
+#     filedialog,
+# )
 
 import cellpose.core
 import h5py
@@ -16,6 +19,7 @@ import numpy as np
 import pandas as pd
 import panel as pn
 import param
+import psutil
 from dask_image.imread import imread
 from shapely import Polygon
 from skimage.exposure import equalize_adapthist
@@ -158,12 +162,15 @@ class CollectiveStats:
             # df.groupby("timestep").progress_apply(compute_voronoi).query("valid_region")
             df.groupby("frame")
             .apply(compute_voronoi)
-            .query("valid_region").reset_index(drop=True)
+            .query("valid_region")
+            .reset_index(drop=True)
         )
 
         # vor_stats_df = valid_regions_df.groupby(["frame", "bin"]).apply(compute_voronoi_stats)
         vor_stats_df = valid_regions_df.groupby(["frame"]).apply(compute_voronoi_stats)
-        filtered_vor_stats_df = filter_voronoi_tiling(vor_stats_df, self.image_rect).reset_index(drop=True)
+        filtered_vor_stats_df = filter_voronoi_tiling(
+            vor_stats_df, self.image_rect
+        ).reset_index(drop=True)
         df = (
             filtered_vor_stats_df.groupby(["frame", "color"])["area"]
             .agg(["mean", "sem", "count"])
@@ -220,7 +227,7 @@ class CollectiveStats:
 
         return fig
 
-
+@deprecated
 def select_files_model():
     red_model, green_model = data.fetch_red_model(), data.fetch_green_model()
     root = Tk()
@@ -307,6 +314,22 @@ class AppUI(param.Parameterized):
         self.validate_btn.on_click(self.validate_install)
         pn.state.onload(self.validate_install)
 
+        self.data_dir_selector = pn.widgets.FileSelector(name="Data", directory="/data")
+        # self.data_dir_selector = pn.widgets.FileSelector(
+        #     name="Data", directory=r"D:\mydata"
+        # )
+        self.red_model_selector = pn.widgets.FileSelector(
+            name="Red CellPose Model",
+            directory="/data/models",
+            # directory="D:\mydata\models",
+            only_files=True,
+        )
+        self.green_model_selector = pn.widgets.FileSelector(
+            name="Green CellPose Model",
+            directory="/data/models",
+            only_files=True,
+        )
+
         self.select_data_path_btn = pn.widgets.Button(
             name="Select Data Path", button_type="primary"
         )
@@ -329,17 +352,19 @@ class AppUI(param.Parameterized):
             name="Segment stack", button_type="primary"
         )
         self.segment_all_btn.on_click(self.segment_stack)
-        self.segmentation_progress_red = pn.widgets.Tqdm(sizing_mode='stretch_width', text='Red')
-        self.segmentation_progress_green = pn.widgets.Tqdm(sizing_mode='stretch_width', text='Green')
+        self.segmentation_progress_red = pn.widgets.Tqdm(
+            sizing_mode="stretch_width", text="Red"
+        )
+        self.segmentation_progress_green = pn.widgets.Tqdm(
+            sizing_mode="stretch_width", text="Green"
+        )
 
         self.view_segmented_btn = pn.widgets.Button(
             name="View Segmentation", button_type="success", disabled=True
         )
         self.view_segmented_btn.on_click(self.view_segmented)
 
-        self.save_tables_btn = pn.widgets.Button(
-            name="Save", button_type="primary"
-        )
+        self.save_tables_btn = pn.widgets.Button(name="Save", button_type="primary")
         self.save_tables_btn.on_click(self.save_tables)
 
         self.run_tracking_btn = pn.widgets.Button(name="Track", button_type="primary")
@@ -348,7 +373,7 @@ class AppUI(param.Parameterized):
 
         self.run_analysis_btn = pn.widgets.Button(name="Analyze", button_type="primary")
         self.run_analysis_btn.on_click(self.run_analysis)
-        self.analysis_progress = pn.widgets.Tqdm(sizing_mode='stretch_width')
+        self.analysis_progress = pn.widgets.Tqdm(sizing_mode="stretch_width")
         self.analysis_progress.pandas(desc="anslysis progress", leave=True)
         self.analysis_ui = None
 
@@ -386,23 +411,21 @@ class AppUI(param.Parameterized):
         self.validate_btn.disabled = False
 
     def save_tables(self, event=None):
-        self.analysis_ui.metric.get_all_spots().to_csv(Path(self.data_dir_path) / 'confluent_fucci_data.csv')
+        self.analysis_ui.metric.get_all_spots().to_csv(
+            Path(self.data_dir_path) / "confluent_fucci_data.csv"
+        )
 
     def select_data_folder(self, *b):
-        root = Tk()
-        root.withdraw()
-        root.call("wm", "attributes", ".", "-topmost", True)
-        short_data, long_data = (
-            data.fetch_short_example_data(),
-            data.fetch_long_example_data(),
-        )
-        files = filedialog.askdirectory(initialdir=short_data[0].parent.parent)
-        # files = filedialog.askdirectory(
-        #     initialdir=r"D:\Data\full_pipeline_tests\left_60_frames"
-        # )
+        print("in select_data_folder")
+        if (
+            len(self.data_dir_selector.value) != 1
+            or not Path(self.data_dir_selector.value[0]).is_dir()
+        ):
+            self.select_data_path_btn.button_type = "danger"
+            return
+        print(f"{self.data_dir_selector.value[0]=}")
 
-        # print(files)
-        self.data_dir_path = Path(files)
+        self.data_dir_path = self.data_dir_selector.value[0]
 
         red_path = Path(self.data_dir_path) / "red.tif"
         green_path = Path(self.data_dir_path) / "green.tif"
@@ -417,38 +440,116 @@ class AppUI(param.Parameterized):
         else:
             self.select_data_path_btn.button_type = "danger"
 
-        return files
+        # return files
 
     def select_red_model(self, _):
-        self.red_model_path = select_files_model()
+        if (
+            len(self.red_model_selector.value) != 1
+            or not Path(self.red_model_selector.value[0]).is_file()
+        ):
+            self.select_data_path_btn.button_type = "danger"
+            return
+
+        self.red_model_path = self.red_model_selector.value[0]
         self.select_red_cellpose_model_btn.button_type = "success"
 
     def select_green_model(self, _):
-        self.green_model_path = select_files_model()
+        if (
+            len(self.red_model_selector.value) != 1
+            or not Path(self.green_model_selector.value[0]).is_file()
+        ):
+            self.select_data_path_btn.button_type = "danger"
+            return
+
+        self.green_model_path = self.green_model_selector.value[0]
         self.select_green_cellpose_model_btn.button_type = "success"
 
     def track(self, event):
+        print("in gui.track")
+        print(f"{self.data_dir_path=}")
         self.run_tracking_btn.disabled = True
-        sys.stdout = self.tracking_terminal
 
         (Path(self.data_dir_path) / "metric.h5").unlink(missing_ok=True)
-        run_trackmate(
-            data.fetch_trackmate_settings(),
-            Path(self.data_dir_path) / "red_segmented.tiff",
-        )
-        run_trackmate(
-            data.fetch_trackmate_settings(),
-            Path(self.data_dir_path) / "green_segmented.tiff",
-        )
+
+        sys.stdout = self.tracking_terminal
+        if os.environ.get("DOCKER"):
+            cmd = [
+                "/opt/fiji/Fiji.app/ImageJ-linux64",
+                "--ij2",
+                "--headless",
+                "--console",
+                f"--memory={int(psutil.virtual_memory().total // 1024 ** 3 * 0.5)}G",
+                "--run",
+                "/workspace/read_settings_and_process_tiff_stack.py",
+            ]
+
+            env = {
+                **os.environ,
+                "DOCKER_SETTINGS_XML": str(data.fetch_trackmate_settings().absolute()),
+                "DOCKER_TIFF_STACK": str(
+                    Path(self.data_dir_path) / "red_segmented.tiff"
+                ),
+                # "MEMORY": f"{int(psutil.virtual_memory().total // 1024 ** 3 * 0.5)}G",
+            }
+            with subprocess.Popen(
+                cmd,
+                env=env,
+                stdout=subprocess.PIPE,
+                bufsize=1,
+                universal_newlines=True,
+            ) as p:
+                for line in p.stdout:
+                    self.tracking_terminal.write(line)
+            # subprocess.run(
+            #     cmd,
+            #     env=env,
+            #     # capture_output=True,
+            #     # stdout=subprocess.STDOUT,
+            #     stdout=sys.stdout,
+            #     # stderr=subprocess.STDOUT,
+            # )
+
+            env["DOCKER_TIFF_STACK"] = str(
+                Path(self.data_dir_path) / "green_segmented.tiff"
+            )
+            with subprocess.Popen(
+                cmd,
+                env=env,
+                stdout=subprocess.PIPE,
+                bufsize=1,
+                universal_newlines=True,
+            ) as p:
+                for line in p.stdout:
+                    self.tracking_terminal.write(line)
+            # subprocess.run(
+            #     cmd,
+            #     env=env,
+            #     # capture_output=True,
+            #     # stdout=subprocess.STDOUT,
+            #     stdout=sys.stdout,
+            #     # stderr=subprocess.STDOUT,
+            # )
+        else:
+            run_trackmate(
+                data.fetch_trackmate_settings(),
+                Path(self.data_dir_path) / "red_segmented.tiff",
+            )
+            run_trackmate(
+                data.fetch_trackmate_settings(),
+                Path(self.data_dir_path) / "green_segmented.tiff",
+            )
 
         sys.stdout = sys.__stdout__
+
         self.run_tracking_btn.disabled = False
 
     def segment_one(self):
         pass
 
     def view_segmented(self, event):
-        self.main[:, :] = "# Segmentation\nWe're opening a viewer (possibly behind the browser window)\nPlease close viewer to continue"
+        self.main[
+            :, :
+        ] = "# Segmentation\nWe're opening a viewer (possibly behind the browser window)\nPlease close viewer to continue"
         self.view_segmented_btn.disabled = True
         view_segmented_napari(self.data_dir_path)
         self.main[:, :] = "# Segmentation\nMove on to tracking"
@@ -466,8 +567,7 @@ class AppUI(param.Parameterized):
             panel_green_tqdm_instance=self.segmentation_progress_green,
         )
 
-        self.view_segmented_btn.clicks+=1
-
+        self.view_segmented_btn.clicks += 1
 
     @param.depends("analysis_available")
     def get_counts(self):
@@ -497,16 +597,24 @@ class AppUI(param.Parameterized):
         self.analysis_available = False
         tm_red = TrackmateXML(Path(self.data_dir_path) / "red_segmented.tiff.xml")
         tm_green = TrackmateXML(Path(self.data_dir_path) / "green_segmented.tiff.xml")
-        shape = h5py.File(Path(self.data_dir_path) / "red_segmented.h5").get('data').shape[1:]
+        shape = (
+            h5py.File(Path(self.data_dir_path) / "red_segmented.h5")
+            .get("data")
+            .shape[1:]
+        )
 
         metric_path = Path(self.data_dir_path) / "metric.h5"
         if metric_path.exists():
             metric_df = pd.read_hdf(metric_path, key="metric")
-            self.metric = CartesianSimilarityFromFile(tm_red, tm_green, metric_df, shape=shape)
+            self.metric = CartesianSimilarityFromFile(
+                tm_red, tm_green, metric_df, shape=shape
+            )
         else:
             self.metric = CartesianSimilarity(tm_red, tm_green, shape=shape)
             # metric_df = self.metric.calculate_metric_for_all_tracks()
-            metric_df = self.metric.calculate_metric_for_all_tracks_with_prefilter(panel_tqdm=self.analysis_progress)
+            metric_df = self.metric.calculate_metric_for_all_tracks_with_prefilter(
+                panel_tqdm=self.analysis_progress
+            )
             metric_df.to_hdf(metric_path, key="metric")
 
         self.analysis_ui = CollectiveStats(
@@ -612,13 +720,16 @@ TrackMate: {'✅' if self.trackmate_check else '❌'} {'See [link](example.com) 
             self.main[:, :] = pn.Column(
                 f"# input",
                 "## Data",
-                # pn.Param(self.param.data_dir_path),
-                pn.Param(self.param.red_path),
-                pn.Param(self.param.green_path),
-                pn.Param(self.param.phase_path),
+                self.data_dir_selector,
+                # # pn.Param(self.param.data_dir_path),
+                # pn.Param(self.param.red_path),
+                # pn.Param(self.param.green_path),
+                # pn.Param(self.param.phase_path),
                 "## CellPose Models",
-                pn.Param(self.param.red_model_path),
-                pn.Param(self.param.green_model_path),
+                self.red_model_selector,
+                self.green_model_selector,
+                # pn.Param(self.param.red_model_path),
+                # pn.Param(self.param.green_model_path),
             )
         elif event.new[0] == 2:
             self.main[:, :] = "# Segmentation"
@@ -693,52 +804,10 @@ def visualize_flow_field(flow_field_df, red_stack, frame=30, min_magnitude=0):
     )
 
 
-# magnification_towards_camera = 1
-# # pixel_size_in_microns = 0.345 * magnification_towards_camera
-# pixel_size_in_microns = 0.67 * magnification_towards_camera
-# calibration_squared_microns_to_squared_pixel = pixel_size_in_microns**2
-
-# AppUI().template.servable()
-# AppUI().template.show()
-
-# pn.Row(
-#     pn.widgets.Button(
-#         icon="alert-triangle-filled", button_type="warning", name="WARNING"
-#     ),
-#     pn.widgets.Button(icon="bug", button_type="danger", name="Error"),
-# ).servable()
-
 if __name__ == "__main__":
-    AppUI().get_template().show()
-    # magnification_towards_camera = 1
-    # # pixel_size_in_microns = 0.345 * magnification_towards_camera
-    # pixel_size_in_microns = 0.67 * magnification_towards_camera
-    # calibration_squared_microns_to_squared_pixel = pixel_size_in_microns**2
-    #
-    # # base_data_path = Path("data/fucci_60_frames")
-    # base_data_path = Path(r"D:\Data\full_pipeline_tests\left_60_frames")
-    # red_stack = base_data_path / "red.tif"
-    # green_stack = base_data_path / "green.tif"
-    # phase_stack = base_data_path / "phase.tif"
-    #
-    # base_model_path = Path(r"D:\Data\full_pipeline_tests\fuccitrack_data\models")
-    # red_model = base_model_path / "fuccitrack_data_red"
-    # green_model = base_model_path / "fuccitrack_data_green"
-    #
-    # # segment_stack(red_stack, red_model)
-    # # segment_stack(green_stack, green_model)
-    #
-    # settings_xml = Path(r"models/trackmate/basic_settings.xml")
-    # red_data_stack = base_data_path / "red_segmented.tiff"
-    # green_data_stack = base_data_path / "green_segmented.tiff"
-    #
-    # # run_trackmate(settings_xml, red_data_stack)
-    # # run_trackmate(settings_xml, green_data_stack)
-    #
-    # tm_red = trackmate_utils.TrackmateXML(base_data_path / "red_segmented.tiff.xml")
-    # tm_green = trackmate_utils.TrackmateXML(base_data_path / "green_segmented.tiff.xml")
-    #
-    # metric_df = pd.read_hdf(base_data_path / "metric.h5", key="metric")
-    # metric = trackmate_utils.CartesianSimilarityFromFile(tm_red, tm_green, metric_df)
-    #
-    # CollectiveStats(metric, phase_stack).show()
+    app = AppUI()
+    pn.serve(
+        panels=app.get_template,
+        port=8080,
+        show=False,
+    )

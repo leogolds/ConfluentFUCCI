@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 import traceback
 from pathlib import Path
 from typing import Any
@@ -109,19 +111,53 @@ def _segment_frame(img, model: Path, gpu: bool = False, diameter: int = 18):
 
 
 def run_trackmate(settings_path: Path, data_path: Path) -> None:
+    print("TOP LEVEL run_trackmate")
+    if os.environ.get("DOCKER"):
+        print("run _run_local_trackmate")
+
+        return _run_local_trackmate(settings_path, data_path)
+    print("run _run_trackmate")
+    _run_trackmate(settings_path, data_path)
+
+
+def _run_local_trackmate(settings_path: Path, data_path: Path):
+    print("RUN LOCAL DOCKER")
+    # cmd = f"/opt/fiji/ImageJ-linux64 --ij2 --headless --console --memory=$MEMORY --run read_settings_and_process_tiff_stack.py"
+    cmd = [
+        "/opt/fiji/Fiji.app/ImageJ-linux64",
+        "--ij2",
+        "--headless",
+        "--console",
+        f"--memory={int(psutil.virtual_memory().total // 1024 ** 3 * 0.5)}G",
+        "--run",
+        "/workspace/read_settings_and_process_tiff_stack.py",
+    ]
+
+    env = {
+        **os.environ,
+        "DOCKER_SETTINGS_XML": str(settings_path.absolute()),
+        "DOCKER_TIFF_STACK": str(data_path.absolute()),
+        # "MEMORY": f"{int(psutil.virtual_memory().total // 1024 ** 3 * 0.5)}G",
+    }
+    subprocess.run(cmd, env=env, stdout=subprocess.STDOUT, stderr=subprocess.STDOUT)
+
+
+def _run_trackmate(settings_path: Path, data_path: Path) -> None:
     """Run TrackMate through a custom container using DockerClient."""
     print(
         f"Running TrackMate on segmented stack at {data_path} using settings at {settings_path}",
     )
     settings_mount = Mount(
         target="/settings",
-        source=str(settings_path.parent.absolute()),
+        source=str(settings_path.parent),
+        # source=str(settings_path.parent.absolute()),
         type="bind",
         read_only=True,
     )
     data_mount = Mount(
         target="/data",
-        source=str(data_path.parent.absolute()),
+        source=str(data_path.parent),
+        # source=str(data_path.parent.absolute()),
         type="bind",
         read_only=False,
     )
