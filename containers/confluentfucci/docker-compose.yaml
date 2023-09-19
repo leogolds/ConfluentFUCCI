@@ -1,10 +1,6 @@
-#docker run -it --rm --gpus all -v /var/run/docker.sock:/var/run/docker.sock -p 8000:8000 cf-pytorch
-
 services:
   confluentfucci:
-#    image: "cf-local-pytorch"
-    image: leogold/confluentfucci:feature-dockerize
-#    command: poetry run python -m confluentfucci.gui
+    image: leogold/confluentfucci:latest
     env_file:
       - .env
     ports:
@@ -12,8 +8,10 @@ services:
       - "9876:9876"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+# Uncomment below to mount user data
 #      - "${DATA_PATH}:/data/user_data"
 #      - "${MODEL_PATH}:/data/models/user_models"
+# Uncomment below to enable GPU (CUDA) acceleration on compatible devices
 #    deploy:
 #      resources:
 #        reservations:
@@ -22,13 +20,4 @@ services:
 #              count: 1
 #              capabilities: [ gpu ]
 
-#  test:
-#    image: pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
-#    command: nvidia-smi
-#    deploy:
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: 1
-#              capabilities: [ gpu ]
+
