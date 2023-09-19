@@ -41,6 +41,10 @@ COPY --from=leogold/trackmate:v1 /opt/fiji /opt/fiji
 ENV PATH $PATH:/opt/fiji/Fiji.app
 ADD containers/trackmate/read_settings_and_process_tiff_stack.py .
 
+# Add demo data
+ADD data /data
+ADD models /data/models
+
 # Install ConfluentFUCCI
 RUN pip install confluentfucci
 
