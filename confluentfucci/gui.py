@@ -227,7 +227,6 @@ class CollectiveStats:
 
         return fig
 
-@deprecated
 def select_files_model():
     red_model, green_model = data.fetch_red_model(), data.fetch_green_model()
     root = Tk()
