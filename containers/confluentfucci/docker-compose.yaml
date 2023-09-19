@@ -2,7 +2,8 @@
 
 services:
   confluentfucci:
-    image: "cf-local-pytorch"
+#    image: "cf-local-pytorch"
+    image: leogold/confluentfucci:feature-dockerize
 #    command: poetry run python -m confluentfucci.gui
     env_file:
       - .env
@@ -11,15 +12,15 @@ services:
       - "9876:9876"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - "${DATA_PATH}:/data"
-      - "${MODEL_PATH}:/data/models"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
+#      - "${DATA_PATH}:/data/user_data"
+#      - "${MODEL_PATH}:/data/models/user_models"
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [ gpu ]
 
 #  test:
 #    image: pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime

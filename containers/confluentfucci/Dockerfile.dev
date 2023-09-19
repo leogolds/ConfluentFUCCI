@@ -34,9 +34,6 @@ RUN apt update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# install napari from repo
-# see https://github.com/pypa/pip/issues/6548#issuecomment-498615461 for syntax
-RUN pip install "napari[all]"
 
 ENV DOCKER=1
 
@@ -61,8 +58,7 @@ RUN conda install -y -c conda-forge  openjdk=8
 
 COPY --from=leogold/trackmate:v1 /opt/fiji /opt/fiji
 
-# Add fiji to the PATH
-ENV PATH $PATH:/opt/fiji/Fiji.app
+
 
 ADD containers/trackmate/read_settings_and_process_tiff_stack.py .
 
