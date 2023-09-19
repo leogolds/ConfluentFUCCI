@@ -1,0 +1,91 @@
+FROM pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG NAPARI_COMMIT=main
+
+RUN apt update; apt-get install -y wget gnupg2 apt-transport-https && \
+    wget -O - https://xpra.org/gpg.asc | apt-key add - && \
+    echo "deb https://xpra.org/ bionic main" > /etc/apt/sources.list.d/xpra.list
+
+# install python resources + graphical libraries used by qt and vispy
+RUN apt update && \
+    apt install -qqy  \
+        mesa-utils \
+        libgl1-mesa-glx \
+        libglib2.0-0 \
+        libfontconfig1 \
+        libxrender1 \
+        libdbus-1-3 \
+        libxkbcommon-x11-0 \
+        libxi6 \
+        libxcb-icccm4 \
+        libxcb-image0 \
+        libxcb-keysyms1 \
+        libxcb-randr0 \
+        libxcb-render-util0 \
+        libxcb-xinerama0 \
+        libxcb-xinput0 \
+        libxcb-xfixes0 \
+        libxcb-shape0 \
+        xpra \
+        xvfb \
+        xterm \
+        sshfs && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# install napari from repo
+# see https://github.com/pypa/pip/issues/6548#issuecomment-498615461 for syntax
+RUN pip install "napari[all]"
+
+ENV DOCKER=1
+
+RUN pip install poetry
+ADD poetry.lock .
+ADD pyproject.toml .
+RUN poetry install
+
+RUN mkdir /models; mkdir /data
+ADD models /data/models
+ADD data /data
+
+ADD confluentfucci ./confluentfucci
+
+#ADD entrypoint.sh .
+#ENTRYPOINT entrypoint.sh
+
+#CMD poetry run python -m confluentfucci.gui
+
+####
+RUN conda install -y -c conda-forge  openjdk=8
+
+COPY --from=leogold/trackmate:v1 /opt/fiji /opt/fiji
+
+# Add fiji to the PATH
+ENV PATH $PATH:/opt/fiji/Fiji.app
+
+ADD containers/trackmate/read_settings_and_process_tiff_stack.py .
+
+####
+
+ENV DISPLAY=:100
+ENV XPRA_PORT=9876
+ENV XPRA_START="xterm -e bash -c 'poetry run python -m confluentfucci.gui'"
+#ENV XPRA_START="xterm"
+ENV XPRA_EXIT_WITH_CLIENT="no"
+ENV XPRA_XVFB_SCREEN="1920x1080x24+32"
+EXPOSE 9876
+
+CMD echo "Launching napari on Xpra. Connect via http://localhost:$XPRA_PORT"; \
+    xpra start \
+    --bind-tcp=0.0.0.0:$XPRA_PORT \
+    --html=on \
+    --start="$XPRA_START" \
+    --exit-with-client="$XPRA_EXIT_WITH_CLIENT" \
+    --xvfb="/usr/bin/Xvfb +extension Composite -screen 0 $XPRA_XVFB_SCREEN -nolisten tcp -noreset" \
+    --daemon=no \
+    --pulseaudio=no \
+    --notifications=no \
+    --bell=no \
+    $DISPLAY
+

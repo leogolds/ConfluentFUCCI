@@ -7,4 +7,4 @@ RUN pip install confluentfucci
 #ADD entrypoint.sh .
 #ENTRYPOINT entrypoint.sh
 
-CMD bash
+CMD python -m confluentfucci.gui

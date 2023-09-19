@@ -2,6 +2,7 @@
 Load sample data.
 """
 import importlib.metadata
+import os
 from importlib import metadata
 from pathlib import Path
 
@@ -9,9 +10,9 @@ import pandas
 import pooch
 
 try:
-    ver = 'v' + metadata.version("confluentfucci")
+    ver = "v" + metadata.version("confluentfucci")
 except importlib.metadata.PackageNotFoundError:
-    ver = 'v1.0.0+12.do9iwd'
+    ver = "v1.0.0+12.do9iwd"
 
 file_registry = pooch.create(
     # Use the default cache folder for the operating system
@@ -37,15 +38,29 @@ file_registry = pooch.create(
 
 
 def fetch_short_example_data():
-    short_data = [path for path in file_registry.registry_files if 'data/3_frames' in path]
-    short_data_paths = [Path(file_registry.fetch(path, progressbar=True)) for path in short_data]
+    if os.environ.get("DOCKER"):
+        short_data_paths = Path().glob("/data/3_frames/*")
+    else:
+        short_data = [
+            path for path in file_registry.registry_files if "data/3_frames" in path
+        ]
+        short_data_paths = [
+            Path(file_registry.fetch(path, progressbar=True)) for path in short_data
+        ]
 
     return short_data_paths
 
 
 def fetch_long_example_data():
-    short_data = [path for path in file_registry.registry_files if 'data/60_frames' in path]
-    short_data_paths = [Path(file_registry.fetch(path, progressbar=True)) for path in short_data]
+    if os.environ.get("DOCKER"):
+        short_data_paths = Path().glob("/data/60_frames/*")
+    else:
+        short_data = [
+            path for path in file_registry.registry_files if "data/60_frames" in path
+        ]
+        short_data_paths = [
+            Path(file_registry.fetch(path, progressbar=True)) for path in short_data
+        ]
 
     return short_data_paths
 
@@ -54,12 +69,15 @@ def fetch_red_model():
     """
     Fetch the red channel CellPose model
     """
-    # The file will be downloaded automatically the first time this is run
-    # returns the file path to the downloaded file. Afterwards, Pooch finds
-    # it in the local cache and doesn't repeat the download.
-    fname = file_registry.fetch("models/cellpose/nuclei_red_v2", progressbar=True)
-    # The "fetch" method returns the full path to the downloaded data file.
-    # All we need to do now is load it with our standard Python tools.
+    if os.environ.get("DOCKER"):
+        fname = "/data/models/cellpose/nuclei_red_v2"
+    else:
+        # The file will be downloaded automatically the first time this is run
+        # returns the file path to the downloaded file. Afterwards, Pooch finds
+        # it in the local cache and doesn't repeat the download.
+        fname = file_registry.fetch("models/cellpose/nuclei_red_v2", progressbar=True)
+        # The "fetch" method returns the full path to the downloaded data file.
+        # All we need to do now is load it with our standard Python tools.
     return Path(fname)
 
 
@@ -67,12 +85,15 @@ def fetch_green_model():
     """
     Fetch the red channel CellPose model
     """
-    # The file will be downloaded automatically the first time this is run
-    # returns the file path to the downloaded file. Afterwards, Pooch finds
-    # it in the local cache and doesn't repeat the download.
-    fname = file_registry.fetch("models/cellpose/nuclei_green_v2", progressbar=True)
-    # The "fetch" method returns the full path to the downloaded data file.
-    # All we need to do now is load it with our standard Python tools.
+    if os.environ.get("DOCKER"):
+        fname = "/data/models/cellpose/nuclei_green_v2"
+    else:
+        # The file will be downloaded automatically the first time this is run
+        # returns the file path to the downloaded file. Afterwards, Pooch finds
+        # it in the local cache and doesn't repeat the download.
+        fname = file_registry.fetch("models/cellpose/nuclei_green_v2", progressbar=True)
+        # The "fetch" method returns the full path to the downloaded data file.
+        # All we need to do now is load it with our standard Python tools.
     return Path(fname)
 
 
@@ -80,10 +101,15 @@ def fetch_trackmate_settings():
     """
     Fetch the red channel CellPose model
     """
-    # The file will be downloaded automatically the first time this is run
-    # returns the file path to the downloaded file. Afterwards, Pooch finds
-    # it in the local cache and doesn't repeat the download.
-    fname = file_registry.fetch("models/trackmate/basic_settings.xml", progressbar=True)
-    # The "fetch" method returns the full path to the downloaded data file.
-    # All we need to do now is load it with our standard Python tools.
+    if os.environ.get("DOCKER"):
+        fname = "/data/models/trackmate/basic_settings.xml"
+    else:
+        # The file will be downloaded automatically the first time this is run
+        # returns the file path to the downloaded file. Afterwards, Pooch finds
+        # it in the local cache and doesn't repeat the download.
+        fname = file_registry.fetch(
+            "models/trackmate/basic_settings.xml", progressbar=True
+        )
+        # The "fetch" method returns the full path to the downloaded data file.
+        # All we need to do now is load it with our standard Python tools.
     return Path(fname)
