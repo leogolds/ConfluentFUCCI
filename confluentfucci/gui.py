@@ -809,4 +809,5 @@ if __name__ == "__main__":
         panels=app.get_template,
         port=8080,
         show=False,
+        websocket_origin = ['*'],
     )
