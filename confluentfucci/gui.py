@@ -227,6 +227,7 @@ class CollectiveStats:
 
         return fig
 
+
 def select_files_model():
     red_model, green_model = data.fetch_red_model(), data.fetch_green_model()
     root = Tk()
@@ -589,7 +590,17 @@ class AppUI(param.Parameterized):
 
     @param.depends("analysis_available")
     def get_flow(self):
-        return self.analysis_ui.flow if self.analysis_available else None
+        # frame = self.flow_frame.param.value_throttled,
+        # min_magnitude = self.flow_min_magnitude.param.value_throttled,
+        return (
+            pn.Column(
+                self.analysis_ui.flow_frame,
+                self.analysis_ui.flow_min_magnitude,
+                self.analysis_ui.flow,
+            )
+            if self.analysis_available
+            else None
+        )
 
     def run_analysis(self, event):
         self.run_analysis_btn.disabled = True
@@ -757,7 +768,10 @@ def visualize_flow_field(flow_field_df, red_stack, frame=30, min_magnitude=0):
     histograms = (
         (
             frame_df.magnitude.hvplot.hist(
-                title="Velocity", xlabel="velocity (um/frame)", xlim=(0, 20)
+                # title="Velocity", xlabel="velocity (um/frame)", xlim=(0, 20)
+                title="Velocity",
+                xlabel="velocity (um/frame)",
+                xlim=(0, 12),
             )
             * v_line
             + df.angle.hvplot.hist(
@@ -809,5 +823,5 @@ if __name__ == "__main__":
         panels=app.get_template,
         port=8080,
         show=False,
-        websocket_origin = ['*'],
+        websocket_origin=["*"],
     )
