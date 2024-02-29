@@ -6,6 +6,7 @@ authors = ["Leo Goldstien <leogoldstien@gmail.com>"]
 readme = "README.md"
 packages = [{include = "confluentfucci"}]
 
+
 [tool.poetry.dependencies]
 loguru = "^0.7.0"
 python = "^3.10"
