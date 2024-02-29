@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v1.0.0 (2024-02-28)
+
+### Breaking
+
+* 1.0 release ([`91cb825`](https://github.com/leogolds/ConfluentFUCCI/commit/91cb82516ba8854de87a43fd72db6aeca3132844))
+
 ## v0.0.26 (2023-09-19)
 
 
