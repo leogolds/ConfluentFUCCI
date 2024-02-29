@@ -28,6 +28,8 @@ tables = "^3.8.0"
 tifffile = "2022.5.4"
 botocore = "1.27.26"
 aicsimageio = "^4.11.0"
+pyqt5 = "=5.15.10"   
+pyqt5-qt5 = "=5.15.2"
 
 [[tool.poetry.source]]
 name = "torch"
