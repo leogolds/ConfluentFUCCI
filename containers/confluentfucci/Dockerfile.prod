@@ -4,14 +4,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV NAPARI_COMMIT=main
 
 # Add xpra repo
-RUN apt update; apt-get install -y wget gnupg2 apt-transport-https \
+RUN apt update; apt-get install -y --no-install-recommends wget gnupg2 apt-transport-https \
     software-properties-common ca-certificates && \
     wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc && \
     wget -O "/etc/apt/sources.list.d/xpra.sources" https://xpra.org/repos/jammy/xpra.sources
 
 # install python resources + graphical libraries used by qt and vispy
 RUN apt update && \
-    apt install -qqy  \
+    apt install -qqy --no-install-recommends  \
     mesa-utils \
     libgl1-mesa-glx \
     libglib2.0-0 \
@@ -47,7 +47,7 @@ ADD data /data
 ADD models /data/models
 
 # Install ConfluentFUCCI
-RUN pip install confluentfucci
+RUN pip install --no-cache-dir confluentfucci
 
 # Start xpra + app
 ENV DOCKER=1
