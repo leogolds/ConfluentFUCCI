@@ -1,19 +1,18 @@
-#docker run -it --rm --gpus all -v /var/run/docker.sock:/var/run/docker.sock -p 8000:8000 cf-pytorch
+#docker run -it --rm --gpus all -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -p 9876:9876 leogold/confluentfucci:latest
 
 services:
   confluentfucci:
-#    image: "cf-local-pytorch"
-    image: leogold/confluentfucci:feature-dockerize
-#    command: poetry run python -m confluentfucci.gui
-    env_file:
-      - .env
+    image: leogold/confluentfucci:latest
+    # env_file:
+    #   - .env
     ports:
       - "8080:8080"
       - "9876:9876"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-#      - "${DATA_PATH}:/data/user_data"
-#      - "${MODEL_PATH}:/data/models/user_models"
+      - "${PWD}:/data/user_data"
+      - "${PWD}:/data/models/user_models"
+
 #    deploy:
 #      resources:
 #        reservations:

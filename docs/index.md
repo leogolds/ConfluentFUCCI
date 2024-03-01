@@ -7,20 +7,43 @@ A suite of tools for analyzing large scale confluent FUCCI experiments
 ![Example 2](figures/fig2.png)
 
 ### Installation
-#### Windows (no Python)
-We provide the following [script](https://raw.githubusercontent.com/leogolds/ConfluentFUCCI/main/install-confluentfucci-windows.bat) to simplify installation. To use, please save the script and run it as administrator.
+The recommended way for trying out ConfluentFUCCI is to use our prebuilt conainer image:
 
-This script will:
+```shell
+docker run -it --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -p 8080:8080 \
+    -p 9876:9876 \
+    leogold/confluentfucci:latest
+```
 
-* Install Python 3.9, Docker Desktop
-* Install ConfluentFUCCI and it's dependecies into a dedicated virtual environment
-* Create a run script on your desktop to start the GUI
+This will start a container that will serve ConfluentFUCCI on [localhost:8080](http://localhost:8080) and a virtual desktop on [localhost:9876](http://localhost:9876). The app served using the above command does not require a GPU, which significantly affects segmentation time. Too speed up segmentation by leveraging your [CUDA compatible GPU](https://developer.nvidia.com/cuda-gpus), please use:
 
-#### Windows/Linux (Python 3.9 installed)
-In a suitable location run:
 
-`python -m venv venv`
+```shell
+docker run -it --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -p 8080:8080 \
+    -p 9876:9876 \
+    --gpus all \
+    leogold/confluentfucci:latest
+```
 
-`. venv/bin/activate`
+#### Using docker-compose
+To simplify deployment, please check out our [docker-compose.yaml](https://github.com/leogolds/ConfluentFUCCI/blob/main/containers/confluentfucci/docker-compose.yaml). Placing this file in the same path as your data should allow you to test the app using:
 
-`python -m confluentfucci.gui`
+```shell
+docker compose up
+```
+
+If a [CUDA compatible GPU](https://developer.nvidia.com/cuda-gpus) is availble on your system, make sure to uncomment:
+
+```shell
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [ gpu ]
+```
