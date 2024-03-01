@@ -3,17 +3,15 @@
 services:
   confluentfucci:
     image: leogold/confluentfucci:latest
-    # image: leogold/confluentfucci:feature-dockerize
-    #    command: poetry run python -m confluentfucci.gui
     # env_file:
     #   - .env
     ports:
       - "8080:8080"
       - "9876:9876"
-      # volumes:
-      # - /var/run/docker.sock:/var/run/docker.sock
-      #      - "${DATA_PATH}:/data/user_data"
-      #      - "${MODEL_PATH}:/data/models/user_models"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "${PWD}:/data/user_data"
+      - "${PWD}:/data/models/user_models"
       #    deploy:
       #      resources:
       #        reservations:
