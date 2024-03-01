@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v1.0.2 (2024-03-01)
+
+### Fix
+
+* Bump base pytorch version ([`225d980`](https://github.com/leogolds/ConfluentFUCCI/commit/225d98052b1bae3a02f27b96cc95c5a1e326bd80))
+
 ## v1.0.1 (2024-02-29)
 
 ### Fix
