@@ -2,7 +2,7 @@
 
 services:
   confluentfucci:
-    image: "local"
+    image: leogold/confluentfucci:latest
     # image: leogold/confluentfucci:feature-dockerize
     #    command: poetry run python -m confluentfucci.gui
     # env_file:
