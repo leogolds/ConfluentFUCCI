@@ -2,33 +2,33 @@
 
 services:
   confluentfucci:
-#    image: "cf-local-pytorch"
-    image: leogold/confluentfucci:feature-dockerize
-#    command: poetry run python -m confluentfucci.gui
-    env_file:
-      - .env
+    image: "local"
+    # image: leogold/confluentfucci:feature-dockerize
+    #    command: poetry run python -m confluentfucci.gui
+    # env_file:
+    #   - .env
     ports:
       - "8080:8080"
       - "9876:9876"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-#      - "${DATA_PATH}:/data/user_data"
-#      - "${MODEL_PATH}:/data/models/user_models"
-#    deploy:
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: 1
-#              capabilities: [ gpu ]
+      # volumes:
+      # - /var/run/docker.sock:/var/run/docker.sock
+      #      - "${DATA_PATH}:/data/user_data"
+      #      - "${MODEL_PATH}:/data/models/user_models"
+      #    deploy:
+      #      resources:
+      #        reservations:
+      #          devices:
+      #            - driver: nvidia
+      #              count: 1
+      #              capabilities: [ gpu ]
 
-#  test:
-#    image: pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
-#    command: nvidia-smi
-#    deploy:
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: 1
-#              capabilities: [ gpu ]
+      #  test:
+      #    image: pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
+      #    command: nvidia-smi
+      #    deploy:
+      #      resources:
+      #        reservations:
+      #          devices:
+      #            - driver: nvidia
+      #              count: 1
+      #              capabilities: [ gpu ]
