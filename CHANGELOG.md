@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v1.0.1 (2024-02-29)
+
+### Fix
+
+* Version issue ([`b9e3774`](https://github.com/leogolds/ConfluentFUCCI/commit/b9e37749fd76bb468195bd38faea898d990d52a0))
+
 ## v1.0.0 (2024-02-28)
 
 ### Breaking
