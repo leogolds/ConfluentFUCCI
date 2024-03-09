@@ -10,8 +10,8 @@ services:
       - "9876:9876"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - "${PWD}:/data/user_data"
-      - "${PWD}:/data/models/user_models"
+      - .:/data/user_data
+      - .:/data/models/user_models
 
 #    deploy:
 #      resources:
