@@ -117,7 +117,9 @@ class CollectiveStats:
         elif event.new[0] == 1:
             self.main[:, :] = self.get_area_estimate()
         elif event.new[0] == 2:
-            self.main[:, :] = self.flow
+            self.main[:, :] = pn.Column(
+                self.flow_frame, self.flow_min_magnitude, self.flow
+            )
         else:
             self.main[:, :] = "other"
 
@@ -226,6 +228,7 @@ class CollectiveStats:
         fig.opts(show_legend=False)
 
         return fig
+
 
 def select_files_model():
     red_model, green_model = data.fetch_red_model(), data.fetch_green_model()
@@ -809,5 +812,5 @@ if __name__ == "__main__":
         panels=app.get_template,
         port=8080,
         show=False,
-        websocket_origin = ['*'],
+        websocket_origin=["*"],
     )
