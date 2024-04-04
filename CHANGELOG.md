@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.2 (2024-04-04)
+
+### Fix
+
+* Fixed area estimate output ([`de9e600`](https://github.com/leogolds/ConfluentFUCCI/commit/de9e600e9a107fdbfd88cf5e66d06cc8ceaff656))
+* Fixed scrollbar when called from AppUI ([`282319e`](https://github.com/leogolds/ConfluentFUCCI/commit/282319edf28188b9e20fbed8c43e691eea8581ab))
+
 ## v0.1.1 (2024-04-04)
 
 ### Fix
