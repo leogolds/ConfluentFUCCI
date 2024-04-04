@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.0 (2024-04-04)
+
+### Feature
+
+* Ci minor release ([`3d8a318`](https://github.com/leogolds/ConfluentFUCCI/commit/3d8a3180813baf603e54645e91c0bae95dde5a6c))
+
 ## v0.0.27 (2024-04-03)
 
 
