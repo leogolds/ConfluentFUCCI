@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.1 (2024-04-04)
+
+### Fix
+
+* Added scrollbar to flow ([`90d4f82`](https://github.com/leogolds/ConfluentFUCCI/commit/90d4f82ba5f544f98d842947fdf435a93df3c516))
+
 ## v0.1.0 (2024-04-04)
 
 ### Feature
