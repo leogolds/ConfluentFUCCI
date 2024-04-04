@@ -160,7 +160,19 @@ class CollectiveStats:
         return a, b
 
     def get_area_estimate(self):
-        df = self.calculate_area_estimate_df()
+        filtered_vor_stats_df = self.calculate_area_estimate_df()
+
+        df = (
+            filtered_vor_stats_df.groupby(["frame", "color"])["area"]
+            .agg(["mean", "sem", "count"])
+            .unstack()
+            .fillna(0)
+            .stack()
+            .reset_index()
+        )
+        df["ci_min"] = df["mean"] - 1.96 * df["sem"]
+        df["ci_max"] = df["mean"] + 1.96 * df["sem"]
+        df["time_hours"] = df.frame / 6
 
         fig = (
             df.hvplot.line(
@@ -219,18 +231,8 @@ class CollectiveStats:
         filtered_vor_stats_df = filter_voronoi_tiling(
             vor_stats_df, self.image_rect
         ).reset_index(drop=True)
-        df = (
-            filtered_vor_stats_df.groupby(["frame", "color"])["area"]
-            .agg(["mean", "sem", "count"])
-            .unstack()
-            .fillna(0)
-            .stack()
-            .reset_index()
-        )
-        df["ci_min"] = df["mean"] - 1.96 * df["sem"]
-        df["ci_max"] = df["mean"] + 1.96 * df["sem"]
-        df["time_hours"] = df.frame / 6
-        return df
+
+        return filtered_vor_stats_df
 
 
 def select_files_model():
