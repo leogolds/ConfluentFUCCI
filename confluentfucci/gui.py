@@ -159,32 +159,7 @@ class CollectiveStats:
         return a, b
 
     def get_area_estimate(self):
-        df = self.metric.partition_cells_into_bins()
-        valid_regions_df = (
-            # df.groupby("timestep").progress_apply(compute_voronoi).query("valid_region")
-            df.groupby("frame")
-            .apply(compute_voronoi)
-            .query("valid_region")
-            .reset_index(drop=True)
-        )
-
-        # vor_stats_df = valid_regions_df.groupby(["frame", "bin"]).apply(compute_voronoi_stats)
-        vor_stats_df = valid_regions_df.groupby(["frame"]).apply(compute_voronoi_stats)
-        filtered_vor_stats_df = filter_voronoi_tiling(
-            vor_stats_df, self.image_rect
-        ).reset_index(drop=True)
-        df = (
-            filtered_vor_stats_df.groupby(["frame", "color"])["area"]
-            .agg(["mean", "sem", "count"])
-            .unstack()
-            .fillna(0)
-            .stack()
-            .reset_index()
-        )
-        df["ci_min"] = df["mean"] - 1.96 * df["sem"]
-        df["ci_max"] = df["mean"] + 1.96 * df["sem"]
-
-        df["time_hours"] = df.frame / 6
+        df = self.calculate_area_estimate_df()
 
         fig = (
             df.hvplot.line(
@@ -228,6 +203,33 @@ class CollectiveStats:
         fig.opts(show_legend=False)
 
         return fig
+
+    def calculate_area_estimate_df(self):
+        df = self.metric.partition_cells_into_bins()
+        valid_regions_df = (
+            # df.groupby("timestep").progress_apply(compute_voronoi).query("valid_region")
+            df.groupby("frame")
+            .apply(compute_voronoi)
+            .query("valid_region")
+            .reset_index(drop=True)
+        )
+        # vor_stats_df = valid_regions_df.groupby(["frame", "bin"]).apply(compute_voronoi_stats)
+        vor_stats_df = valid_regions_df.groupby(["frame"]).apply(compute_voronoi_stats)
+        filtered_vor_stats_df = filter_voronoi_tiling(
+            vor_stats_df, self.image_rect
+        ).reset_index(drop=True)
+        df = (
+            filtered_vor_stats_df.groupby(["frame", "color"])["area"]
+            .agg(["mean", "sem", "count"])
+            .unstack()
+            .fillna(0)
+            .stack()
+            .reset_index()
+        )
+        df["ci_min"] = df["mean"] - 1.96 * df["sem"]
+        df["ci_max"] = df["mean"] + 1.96 * df["sem"]
+        df["time_hours"] = df.frame / 6
+        return df
 
 
 def select_files_model():
@@ -415,6 +417,9 @@ class AppUI(param.Parameterized):
     def save_tables(self, event=None):
         self.analysis_ui.metric.get_all_spots().to_csv(
             Path(self.data_dir_path) / "confluent_fucci_data.csv"
+        )
+        self.analysis_ui.calculate_area_estimate_df().to_csv(
+            Path(self.data_dir_path) / "confluent_fucci_data_area.csv"
         )
 
     def select_data_folder(self, *b):
