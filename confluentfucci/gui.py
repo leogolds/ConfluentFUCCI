@@ -117,11 +117,12 @@ class CollectiveStats:
         elif event.new[0] == 1:
             self.main[:, :] = self.get_area_estimate()
         elif event.new[0] == 2:
-            self.main[:, :] = pn.Column(
-                self.flow_frame, self.flow_min_magnitude, self.flow
-            )
+            self.main[:, :] = self.get_flow_ui()
         else:
             self.main[:, :] = "other"
+
+    def get_flow_ui(self):
+        return pn.Column(self.flow_frame, self.flow_min_magnitude, self.flow)
 
     def show(self):
         self.template.show()
@@ -597,7 +598,7 @@ class AppUI(param.Parameterized):
 
     @param.depends("analysis_available")
     def get_flow(self):
-        return self.analysis_ui.flow if self.analysis_available else None
+        return self.analysis_ui.get_flow_ui() if self.analysis_available else None
 
     def run_analysis(self, event):
         self.run_analysis_btn.disabled = True
