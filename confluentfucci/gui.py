@@ -88,7 +88,7 @@ class CollectiveStats:
 
     def get_template(self):
         template = pn.template.FastListTemplate(
-            title="PyFucciTrack",
+            title="ConfluentFUCCI",
             theme_toggle=False,
             sidebar=[self.sidebar],
             main=self.main,
@@ -247,7 +247,7 @@ def select_files_model():
 
 def view_segmented_napari(data_dir_path):
     base_data_path = Path(data_dir_path)
-    viewer = napari.Viewer(title="PyFucciTrack Viewer")
+    viewer = napari.Viewer(title="ConfluentFUCCI Viewer")
 
     red = imread(base_data_path / "red.tif")
     green = imread(base_data_path / "green.tif")
