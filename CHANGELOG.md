@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v1.1.0 (2024-04-05)
+
+### Feature
+
+* Updated viewer name ([`71e44a0`](https://github.com/leogolds/ConfluentFUCCI/commit/71e44a04b6a60a5975ddd4ea039c0713e90a4a84))
+
 ## v1.0.0 (2024-04-05)
 
 ### Breaking
