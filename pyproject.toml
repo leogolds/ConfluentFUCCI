@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ConfluentFUCCI"
-version = "1.1.0"
+version = "1.1.1"
 description = ""
 authors = ["Leo Goldstien <leogoldstien@gmail.com>"]
 readme = "README.md"
