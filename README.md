@@ -1,6 +1,10 @@
 # ConfluentFUCCI
 A suite of tools for analyzing large scale confluent FUCCI experiments
 
+ConfluentFUCCI has now been peer-reviewed and the publication is freely available [here](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0305491).  To cite please use: 
+
+**Goldstien L, Lavi Y, Atia L (2024) ConfluentFUCCI for fully-automated analysis of cell-cycle progression in a highly dense collective of migrating cells. PLoS ONE 19(6): e0305491. https://doi.org/10.1371/journal.pone.0305491**
+
 ## Overview
 This repo includes an integration and automation layer for running [CellPose](https://github.com/MouseLand/cellpose) (person-in-the-loop ML driven cell segentation) and TrackMate (cell tracking). Furthermore, a set of analysis and visualization tools for studying confluent cellular dynamics using a FUCCI stain are included.
 
